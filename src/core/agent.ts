@@ -100,33 +100,25 @@ export class Agent {
     })
     console.log('llm res', res)
     const { toolCalls, reasoning, text } = res
+    console.log('reasoning', reasoning)
     if (text) {
       this.context.addMessage({ content: text, role: 'assistant' })
     }
     if (toolCalls.length) {
+      //TODO tool call only one by one
       this.context.addMessage({
         role: 'assistant',
         content: toolCalls,
       })
-      this.processToolCall()
+      this.processToolCall(toolCalls[0])
     }
   }
-  async processToolCall() {
-    const target = this.context.getMessages().find((message) => {
-      return (
-        message.role === 'assistant' &&
-        Array.isArray(message.content) &&
-        message.content[0].type === 'tool-call'
-      )
-    })
-    if (target) {
-      const toolCall = (target.content as Array<ToolCallPart>)[0]
-      const executer = this.toolsExecuter[toolCall.toolName]
-      if (executer) {
-        await this.auditTask(() => executer(toolCall.input, this), toolCall)
-        //
-        this.requestLLM()
-      }
+  async processToolCall(toolCall: ToolCallPart) {
+    const executer = this.toolsExecuter[toolCall.toolName]
+    if (executer) {
+      await this.auditTask(() => executer(toolCall.input, this), toolCall)
+      //
+      this.requestLLM()
     }
   }
 }

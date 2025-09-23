@@ -96,7 +96,7 @@ export default function Setting() {
 
         <NavLink
           to='/'
-          className='flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5'
+          className='flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 hover:bg-blue-200'
         >
           <MoveLeft className='h-4 w-4 text-blue-500' />
           <span className='text-sm font-medium text-blue-600'>home</span>

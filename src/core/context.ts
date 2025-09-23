@@ -28,10 +28,10 @@ export class Context<T extends ModelMessage = ModelMessage> {
       if (i.role === 'tool') {
         return {
           role: 'tool',
-          content: i.content.map((i) => {
-            debugger
-            // i.output.value = JSON.stringify(i.output.value, null, 2)
-            return i
+          content: i.content.map((elm) => {
+            // @ts-expect-error xxx
+            elm.output.value.status = i.status
+            return elm
           }),
         }
       }

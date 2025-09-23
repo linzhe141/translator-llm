@@ -9,6 +9,8 @@ export default function Home() {
   const disabled = useInput.trim().length === 0
 
   const agent = useRef(new Agent())
+  // @ts-expect-error just for testing
+  window.agent = agent.current
   const messageList = useSyncExternalStore(
     agent.current.context.subscribe.bind(agent.current.context),
     agent.current.context.getMessages.bind(agent.current.context)

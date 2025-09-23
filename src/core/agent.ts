@@ -5,16 +5,30 @@ import {
   type UserModelMessage,
   type ToolCallPart,
   type ToolModelMessage,
-  generateText,
   type ToolSet,
+  generateText,
 } from 'ai'
 import { systemPrompt } from './prompt/system.js'
 import { translateExecutor, translateTool } from './tools/translate.js'
-type WorkflowState = 'idle' | 'user_input' | 'model_response' | 'workflowing'
+
+//TODO 当语句调用完成后，不需要发送到llm了，
+export type WorkflowState =
+  | 'idle'
+  | 'user_input'
+  //TODO 细分 reasoning | text only | tool call only | mixed
+  | 'llm_response_pending'
+  | 'llm_response_received'
+  // TODO parallel 状态细分
+  | 'tool_executing'
+  | 'tool_result' // 会被 'tool_audit_pending' 覆盖 考虑不要？
+  | 'tool_audit_pending'
+  | 'tool_audit_approved'
+  | 'tool_audit_rejected'
+  | 'workflow_complete' // 等同于 idle 可以考虑不要这个状态？
+  | 'error'
 export class Agent {
   tools: ToolSet = {}
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-  toolsExecuter: Record<string, Function> = {}
+  toolsExecuter: Record<string, (...args: any[]) => any> = {}
 
   state: WorkflowState = 'idle'
   llm: LanguageModel = null!
@@ -45,13 +59,16 @@ export class Agent {
   rejectTask() {
     this._resolve?.({ status: 'rejected' })
   }
-  userSubmit(message: UserModelMessage) {
+  async userSubmit(message: UserModelMessage) {
     this.state = 'user_input'
     this.context.addMessage(message)
-    this.requestLLM()
+    await this.requestLLM()
+    this.state = 'idle'
   }
   async auditTask(task: () => Promise<any>, toolCall: ToolCallPart) {
+    this.state = 'tool_executing'
     const taskResult = await task()
+    this.state = 'tool_result'
     console.log(taskResult)
     const toApproveMessage: ToolModelMessage & {
       status: 'approved' | 'rejected' | 'idle'
@@ -71,10 +88,12 @@ export class Agent {
       ],
     }
     this.context.addMessage(toApproveMessage)
+    this.state = 'tool_audit_pending'
     const res = await this.waitingToBeResolved()
     const { status } = res
     if (status === 'rejected') {
       // retry
+      this.state = 'tool_audit_rejected'
       const messages = this.context.getMessages()
       this.context.setMessages([
         ...messages.slice(0, messages.length - 1),
@@ -82,6 +101,7 @@ export class Agent {
       ])
       await this.auditTask(task, toolCall)
     } else {
+      this.state = 'tool_audit_approved'
       const messages = this.context.getMessages()
       this.context.setMessages([
         ...messages.slice(0, messages.length - 1),
@@ -92,25 +112,34 @@ export class Agent {
   }
 
   async requestLLM() {
-    const res = await generateText({
-      system: systemPrompt,
-      model: this.llm,
-      tools: this.tools,
-      messages: this.context.toModelMessages(),
-    })
-    console.log('llm res', res)
-    const { toolCalls, reasoning, text } = res
-    console.log('reasoning', reasoning)
-    if (text) {
-      this.context.addMessage({ content: text, role: 'assistant' })
-    }
-    if (toolCalls.length) {
-      //TODO tool call only one by one
-      this.context.addMessage({
-        role: 'assistant',
-        content: toolCalls,
+    try {
+      this.state = 'llm_response_pending'
+      const res = await generateText({
+        system: systemPrompt,
+        model: this.llm,
+        tools: this.tools,
+        messages: this.context.toModelMessages(),
       })
-      this.processToolCall(toolCalls[0])
+      this.state = 'llm_response_received'
+      console.log('llm res', res)
+      const { toolCalls, reasoning, text } = res
+      if (reasoning) {
+        console.log('reasoning', reasoning)
+      }
+      if (text) {
+        this.context.addMessage({ content: text, role: 'assistant' })
+      }
+      if (toolCalls.length) {
+        //TODO tool call only one by one
+        this.context.addMessage({
+          role: 'assistant',
+          content: toolCalls,
+        })
+        await this.processToolCall(toolCalls[0])
+      }
+    } catch (error) {
+      console.error(error)
+      this.state = 'error'
     }
   }
   async processToolCall(toolCall: ToolCallPart) {
@@ -118,7 +147,7 @@ export class Agent {
     if (executer) {
       await this.auditTask(() => executer(toolCall.input, this), toolCall)
       //
-      this.requestLLM()
+      await this.requestLLM()
     }
   }
 }

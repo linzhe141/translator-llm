@@ -30,6 +30,7 @@ export default function Home() {
         value={useInput}
         onChange={(e) => setUserInput(e.target.value)}
         rows={10}
+        disabled={state !== 'workflow_complete' && state !== 'idle'}
         placeholder='Write some text you want to translate here...'
       />
       <button
@@ -51,83 +52,96 @@ export default function Home() {
         translate
       </button>
 
-      <div>
-        {messageList.map((i, index) => {
-          switch (i.role) {
-            case 'user': {
-              const message = i
-              return (
-                <div
-                  key={index}
-                  className='my-4 rounded-md border bg-blue-100 p-2'
-                >
-                  <div>
-                    <UserRound />
+      {state === 'workflow_complete' ? (
+        <div className='mt-2 flex gap-2'>
+          <pre className='w-0 flex-1 overflow-auto rounded border border-gray-300 p-2 whitespace-pre-line'>
+            {agent.current.workingMemory.originalText}
+          </pre>
+          <pre className='w-0 flex-1 overflow-auto rounded border border-gray-300 p-2 whitespace-pre-line'>
+            {agent.current.workingMemory.translationResults
+              .map((i) => i.translated)
+              .join('')}
+          </pre>
+        </div>
+      ) : (
+        <div>
+          {messageList.map((i, index) => {
+            switch (i.role) {
+              case 'user': {
+                const message = i
+                return (
+                  <div
+                    key={index}
+                    className='my-4 rounded-md border bg-blue-100 p-2'
+                  >
+                    <div>
+                      <UserRound />
+                    </div>
+                    <pre className='overflow-auto break-words'>
+                      {message.content as string}
+                    </pre>
                   </div>
-                  <pre className='overflow-auto break-words'>
-                    {message.content as string}
-                  </pre>
-                </div>
-              )
-            }
-            case 'assistant': {
-              const message = i
-              return (
-                <div className='my-4 rounded-md border bg-blue-500 p-2 text-white'>
-                  <div>
-                    <Bot></Bot>
-                  </div>
-                  <pre className='overflow-auto break-words'>
-                    {typeof message.content === 'string'
-                      ? message.content
-                      : JSON.stringify(message.content, null, 2)}
-                  </pre>
-                </div>
-              )
-            }
-            case 'tool': {
-              const message = i as ToolModelMessage & {
-                status: 'approved' | 'rejected' | 'idle'
+                )
               }
-              return (
-                <div className='my-4 rounded-md border bg-[#3c3c3c] p-2 text-white'>
-                  <div>
-                    <Bolt />
+              case 'assistant': {
+                const message = i
+                return (
+                  <div className='my-4 rounded-md border bg-blue-500 p-2 text-white'>
+                    <div>
+                      <Bot></Bot>
+                    </div>
+                    <pre className='overflow-auto break-words'>
+                      {typeof message.content === 'string'
+                        ? message.content
+                        : JSON.stringify(message.content, null, 2)}
+                    </pre>
                   </div>
-                  <pre className='overflow-auto break-words'>
-                    {JSON.stringify(message.content, null, 2)}
-                  </pre>
-                </div>
-              )
+                )
+              }
+              case 'tool': {
+                const message = i as ToolModelMessage & {
+                  status: 'approved' | 'rejected' | 'idle'
+                }
+                return (
+                  <div className='my-4 rounded-md border bg-[#3c3c3c] p-2 text-white'>
+                    <div>
+                      <Bolt />
+                    </div>
+                    <pre className='overflow-auto break-words'>
+                      {JSON.stringify(message.content, null, 2)}
+                    </pre>
+                  </div>
+                )
+              }
             }
-          }
-        })}
-        <div>agent state: {state} </div>
-        {pendingResolveData && (
-          <div>
-            <div>待审核内容：</div>
-            <div>{JSON.stringify(pendingResolveData, null, 2)}</div>
-            <div className='mt-2 flex gap-2'>
-              <button
-                className='rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700'
-                onClick={() => {
-                  agent.current.resolveTask()
-                }}
-              >
-                通过
-              </button>
-              <button
-                className='rounded bg-red-500 px-4 py-2 font-bold text-white hover:bg-red-700'
-                onClick={() => {
-                  agent.current.rejectTask()
-                }}
-              >
-                拒绝
-              </button>
+          })}
+          <div>agent state: {state} </div>
+          {pendingResolveData && (
+            <div>
+              <div>待审核内容：</div>
+              <div>{JSON.stringify(pendingResolveData, null, 2)}</div>
+              <div className='mt-2 flex gap-2'>
+                <button
+                  className='rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700'
+                  onClick={() => {
+                    agent.current.resolveTask()
+                  }}
+                >
+                  通过
+                </button>
+                <button
+                  className='rounded bg-red-500 px-4 py-2 font-bold text-white hover:bg-red-700'
+                  onClick={() => {
+                    agent.current.rejectTask()
+                  }}
+                >
+                  拒绝
+                </button>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

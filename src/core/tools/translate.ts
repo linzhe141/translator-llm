@@ -67,7 +67,7 @@ async function auditTranslate(sentence: string, agent: Agent) {
       original: sentence,
       translated: translated,
       approved: true,
-      rejectionCount: rejectedItems[sentence].length || 0,
+      rejectionCount: rejectedItems[sentence]?.length || 0,
     })
     delete rejectedItems[sentence]
   } else {

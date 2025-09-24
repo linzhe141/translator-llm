@@ -40,9 +40,9 @@ interface WorkingMemory {
   }[]
   isComplete: boolean
 }
-function createInitialWorkingMemory(): WorkingMemory {
+function createInitialWorkingMemory(originalText?: string): WorkingMemory {
   return {
-    originalText: '',
+    originalText: originalText || '',
     splitTexts: [],
     currentTranslationIndex: -1,
     translationResults: [],
@@ -94,15 +94,15 @@ export class Agent {
   async userSubmit(message: UserModelMessage) {
     this.state = 'user_input'
     this.context.addMessage(message)
-    this.workingMemory = createInitialWorkingMemory()
+    this.workingMemory = createInitialWorkingMemory(message.content as string)
     // await this.requestLLM()
     await this.workloop()
-    this.state = 'idle'
   }
   async workloop() {
     while (!this.workingMemory.isComplete) {
       await this.streamRequestLLM()
     }
+    this.state = 'workflow_complete'
   }
 
   async execToolCall(executer: () => Promise<any>, toolCall: ToolCallPart) {

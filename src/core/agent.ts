@@ -34,7 +34,7 @@ export class Agent {
   tools: ToolSet = {}
   toolsExecuter: Record<string, (...args: any[]) => any> = {}
 
-  llm: LanguageModel = null!
+  models: Record<'reasoning' | 'tool', LanguageModel> = createModels()
   context: Context = null!
   private _resolve:
     | ((value: { status: 'approved' | 'rejected' }) => void)
@@ -50,10 +50,8 @@ export class Agent {
   }
   constructor(options: any) {
     this.options = options
-    const models = createModels()
     this.tools = tools
     this.toolsExecuter = toolsExecuter
-    this.llm = models.translator
     this.context = new Context()
   }
 
@@ -107,7 +105,7 @@ export class Agent {
       this.state = 'llm_response_pending'
       const res = await generateText({
         system: systemPrompt,
-        model: this.llm,
+        model: this.models.reasoning,
         tools: this.tools,
         messages: this.context.toModelMessages(),
       })
@@ -138,7 +136,7 @@ export class Agent {
       this.state = 'llm_response_pending'
       const { fullStream, toolCalls, reasoning } = streamText({
         system: systemPrompt,
-        model: this.llm,
+        model: this.models.reasoning,
         tools: this.tools,
         messages: this.context.toModelMessages(),
       })
@@ -164,6 +162,12 @@ export class Agent {
               },
             ])
           }
+        } else if (chunk.type === 'tool-call') {
+          this.context.addMessage({
+            role: 'assistant',
+            content: [chunk],
+          })
+          await this.processToolCall(chunk)
         }
       }
     } catch (error) {

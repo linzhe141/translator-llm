@@ -26,8 +26,8 @@ export const router = createHashRouter([
 
 // eslint-disable-next-line react-refresh/only-export-components
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { apiKey, baseUrl, endPoint } = useSettingsStore()
-  if (!apiKey || !baseUrl || !endPoint) {
+  const { apiKey, baseUrl, reasonModelID } = useSettingsStore()
+  if (!apiKey || !baseUrl || !reasonModelID) {
     return <Navigate to='/settings' replace />
   }
 

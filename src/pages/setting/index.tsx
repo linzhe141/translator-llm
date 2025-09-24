@@ -7,7 +7,8 @@ import { toast } from 'sonner'
 interface FormData {
   apiKey: string
   baseUrl: string
-  endPoint: string
+  reasonModelID: string
+  toolModelID: string
 }
 export default function Setting() {
   const [pending, setPending] = useState(false)
@@ -15,21 +16,25 @@ export default function Setting() {
   const [formErrors, setFormErrors] = useState<FormData>({
     apiKey: '',
     baseUrl: '',
-    endPoint: '',
+    reasonModelID: '',
+    toolModelID: '',
   })
 
-  const { apiKey, baseUrl, endPoint, setLLMApi } = useSettingsStore()
+  const { apiKey, baseUrl, reasonModelID, toolModelID, setLLMApi } =
+    useSettingsStore()
   const [formData, setFormData] = useState({
     apiKey: apiKey || '',
     baseUrl: baseUrl || '',
-    endPoint: endPoint || '',
+    reasonModelID: reasonModelID || '',
+    toolModelID: toolModelID || '',
   })
 
   const validateForm = () => {
     const errors = {
       apiKey: '',
       baseUrl: '',
-      endPoint: '',
+      reasonModelID: '',
+      toolModelID: '',
     }
 
     if (!formData.apiKey.trim()) {
@@ -40,8 +45,12 @@ export default function Setting() {
       errors.baseUrl = 'Base URL is required'
     }
 
-    if (!formData.endPoint.trim()) {
-      errors.endPoint = 'Model is required'
+    if (!formData.reasonModelID.trim()) {
+      errors.reasonModelID = 'reasonModelID is required'
+    }
+
+    if (!formData.toolModelID.trim()) {
+      errors.toolModelID = 'toolModelID is required'
     }
 
     setFormErrors(errors)
@@ -148,21 +157,41 @@ export default function Setting() {
 
         <div className='space-y-2'>
           <label
-            htmlFor='endPoint'
+            htmlFor='reasonModelID'
             className='text-secondary-foreground block text-lg'
           >
-            Model
+            Reasoning Model
           </label>
           <input
-            id='endPoint'
+            id='reasonModelID'
             type='text'
-            value={formData.endPoint}
-            onChange={(e) => handleInputChange('endPoint', e.target.value)}
+            value={formData.reasonModelID}
+            onChange={(e) => handleInputChange('reasonModelID', e.target.value)}
             className='w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none'
             placeholder='gpt-3.5-turbo'
           />
-          {formErrors.endPoint && (
-            <p className='text-sm text-red-500'>{formErrors.endPoint}</p>
+          {formErrors.reasonModelID && (
+            <p className='text-sm text-red-500'>{formErrors.reasonModelID}</p>
+          )}
+        </div>
+
+        <div className='space-y-2'>
+          <label
+            htmlFor='toolModelID'
+            className='text-secondary-foreground block text-lg'
+          >
+            Tool Model
+          </label>
+          <input
+            id='toolModelID'
+            type='text'
+            value={formData.toolModelID}
+            onChange={(e) => handleInputChange('toolModelID', e.target.value)}
+            className='w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none'
+            placeholder='gpt-3.5-turbo'
+          />
+          {formErrors.toolModelID && (
+            <p className='text-sm text-red-500'>{formErrors.toolModelID}</p>
           )}
         </div>
 

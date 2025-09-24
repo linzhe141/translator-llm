@@ -25,7 +25,7 @@ export const splitExecutor = async (
   agent: Agent
 ) => {
   const res = await generateObject({
-    model: agent.llm,
+    model: agent.models.tool,
     system: description,
     prompt: `split origin text: ${input.text}`,
     schema: z.array(z.string()).describe('The array of split sentences'),

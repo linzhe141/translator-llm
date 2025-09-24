@@ -31,7 +31,7 @@ export const translateExecutor = async (
 
 async function translateSentence(sentence: string, agent: Agent) {
   const res = await generateText({
-    model: agent.llm,
+    model: agent.models.tool,
     system: `${description}
     ${
       Object.keys(rejectedItems).length > 0

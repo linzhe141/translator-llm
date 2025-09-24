@@ -1,20 +1,17 @@
-import { useRef, useState, useSyncExternalStore } from 'react'
-import { Agent } from '@/core/agent'
+import { useState } from 'react'
 import type { ToolModelMessage } from 'ai'
 import { Bolt, Bot, MoveRight, UserRound } from 'lucide-react'
 import { NavLink } from 'react-router'
+import { useAgent } from '@/hooks/useAgent'
 
 export default function Home() {
   const [useInput, setUserInput] = useState('')
   const disabled = useInput.trim().length === 0
 
-  const agent = useRef(new Agent())
+  const { agent, pendingResolveData, messageList, state } = useAgent()
   // @ts-expect-error just for testing
   window.agent = agent.current
-  const messageList = useSyncExternalStore(
-    agent.current.context.subscribe.bind(agent.current.context),
-    agent.current.context.getMessages.bind(agent.current.context)
-  )
+
   console.log('messageList', messageList)
   return (
     <div className='mx-auto my-4 w-[1000px]'>
@@ -95,38 +92,39 @@ export default function Home() {
                   <div>
                     <Bolt />
                   </div>
-                  <div>
-                    status:
-                    <span
-                      className={`${message.status === 'approved' ? 'text-green-500' : message.status === 'rejected' ? 'text-red-500' : 'text-yellow-500'} ml-4`}
-                    >
-                      {message.status}
-                    </span>
-                  </div>
                   <pre className='overflow-auto break-words'>
                     {JSON.stringify(message.content, null, 2)}
                   </pre>
-                  {message.status === 'idle' && (
-                    <div className='mt-2'>
-                      <button
-                        className='rounded-md bg-green-500 p-2 text-white'
-                        onClick={() => agent.current.resolveTask()}
-                      >
-                        Approve
-                      </button>
-                      <button
-                        className='ml-4 rounded-md bg-red-500 p-2 text-white'
-                        onClick={() => agent.current.rejectTask()}
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  )}
                 </div>
               )
             }
           }
         })}
+        <div>agent state: {state} </div>
+        {pendingResolveData && (
+          <div>
+            <div>待审核内容：</div>
+            <div>{JSON.stringify(pendingResolveData, null, 2)}</div>
+            <div className='mt-2 flex gap-2'>
+              <button
+                className='rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700'
+                onClick={() => {
+                  agent.current.resolveTask()
+                }}
+              >
+                通过
+              </button>
+              <button
+                className='rounded bg-red-500 px-4 py-2 font-bold text-white hover:bg-red-700'
+                onClick={() => {
+                  agent.current.rejectTask()
+                }}
+              >
+                拒绝
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

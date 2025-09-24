@@ -24,18 +24,7 @@ export class Context<T extends ModelMessage = ModelMessage> {
   }
 
   toModelMessages(): ModelMessage[] {
-    return this.messages.map((i) => {
-      if (i.role === 'tool') {
-        return {
-          role: 'tool',
-          content: i.content.map((elm) => {
-            // @ts-expect-error xxx
-            elm.output.value.status = i.status
-            return elm
-          }),
-        }
-      }
-      return i
-    })
+    // TODO only some special messages
+    return this.messages
   }
 }

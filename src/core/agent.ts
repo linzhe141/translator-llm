@@ -27,15 +27,40 @@ export type WorkflowState =
   | 'tool_audit_rejected'
   | 'workflow_complete' // 等同于 idle 可以考虑不要这个状态？
   | 'error'
-export class Agent {
-  options: any = {}
-  splitedTexts: { sentence: string; hasComplete: boolean }[] = []
 
-  tools: ToolSet = {}
-  toolsExecuter: Record<string, (...args: any[]) => any> = {}
+interface WorkingMemory {
+  originalText: string
+  splitTexts: string[]
+  currentTranslationIndex: number
+  translationResults: {
+    original: string
+    translated: string
+    approved: boolean
+    rejectionCount: number
+  }[]
+  isComplete: boolean
+}
+function createInitialWorkingMemory(): WorkingMemory {
+  return {
+    originalText: '',
+    splitTexts: [],
+    currentTranslationIndex: -1,
+    translationResults: [],
+    isComplete: false,
+  }
+}
+export class Agent {
+  // Agent 的工作记忆
+  workingMemory: WorkingMemory = createInitialWorkingMemory()
+
+  options: any = {}
+
+  tools: ToolSet = tools
+  toolsExecuter: Record<string, (...args: any[]) => any> = toolsExecuter
 
   models: Record<'reasoning' | 'tool', LanguageModel> = createModels()
-  context: Context = null!
+  context: Context = new Context()
+
   private _resolve:
     | ((value: { status: 'approved' | 'rejected' }) => void)
     | null = null
@@ -50,9 +75,6 @@ export class Agent {
   }
   constructor(options: any) {
     this.options = options
-    this.tools = tools
-    this.toolsExecuter = toolsExecuter
-    this.context = new Context()
   }
 
   waitingToBeResolved(data: any): Promise<{ status: 'approved' | 'rejected' }> {
@@ -72,10 +94,15 @@ export class Agent {
   async userSubmit(message: UserModelMessage) {
     this.state = 'user_input'
     this.context.addMessage(message)
-
+    this.workingMemory = createInitialWorkingMemory()
     // await this.requestLLM()
-    await this.streamRequestLLM()
+    await this.workloop()
     this.state = 'idle'
+  }
+  async workloop() {
+    while (!this.workingMemory.isComplete) {
+      await this.streamRequestLLM()
+    }
   }
 
   async execToolCall(executer: () => Promise<any>, toolCall: ToolCallPart) {
@@ -177,13 +204,18 @@ export class Agent {
   }
   async processToolCall(toolCall: ToolCallPart) {
     const executer = this.toolsExecuter[toolCall.toolName]
-    if (executer) {
+    if (!executer) return
+    const toolName = toolCall.toolName
+    if (toolName === 'translate') {
+      for (const input of this.workingMemory.splitTexts) {
+        await this.execToolCall(
+          () => executer({ src_string: input }, this),
+          toolCall
+        )
+      }
+      this.workingMemory.isComplete = true
+    } else {
       await this.execToolCall(() => executer(toolCall.input, this), toolCall)
-      await this.requestLLM()
     }
-  }
-
-  hasComplete() {
-    return this.splitedTexts.every((text) => text.hasComplete)
   }
 }

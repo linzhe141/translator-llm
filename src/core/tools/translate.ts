@@ -2,7 +2,17 @@ import { tool, generateText } from 'ai'
 import { z } from 'zod'
 import type { Agent } from '../agent'
 
-const description = `Translates text from any language to English. This tool preserves proper nouns, technical terms, symbols, and formatting (including line breaks) from the original text. `
+const description = `
+This tool (name: 'translate') translates text from any language into English only.
+
+Rules:
+- Do NOT summarize, interpret, or expand. Translation only.
+- Preserve proper nouns, technical terms, symbols, and formatting (including line breaks) exactly as in the source.
+- If the input contains code snippets (inline code, fenced code blocks, or any programming syntax),
+  do NOT translate the code. Leave all code exactly as it appears.
+- Translate only the non-code text.
+- Output only the translated text, without any additional commentary or explanation.
+`
 
 const rejectedItems: Record<string, string[]> = {}
 const inputSchema = z.object({
@@ -52,8 +62,14 @@ async function auditTranslate(sentence: string, agent: Agent) {
   const { status } = await agent.waitingToBeResolved({ sentence, translated })
   if (status === 'approved') {
     // mark complete
-    const target = agent.splitedTexts.find((i) => i.sentence === sentence)
-    if (target) target.hasComplete = true
+    agent.workingMemory.currentTranslationIndex++
+    agent.workingMemory.translationResults.push({
+      original: sentence,
+      translated: translated,
+      approved: true,
+      rejectionCount: rejectedItems[sentence].length || 0,
+    })
+    delete rejectedItems[sentence]
   } else {
     if (rejectedItems[sentence]) {
       rejectedItems[sentence].push(translated)

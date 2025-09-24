@@ -64,7 +64,7 @@ export default function Home() {
                   <div>
                     <UserRound />
                   </div>
-                  <pre className='overflow-auto break-words whitespace-normal'>
+                  <pre className='overflow-auto break-words'>
                     {message.content as string}
                   </pre>
                 </div>
@@ -77,8 +77,10 @@ export default function Home() {
                   <div>
                     <Bot></Bot>
                   </div>
-                  <pre className='overflow-auto break-words whitespace-normal'>
-                    {JSON.stringify(message.content, null, 2)}
+                  <pre className='overflow-auto break-words'>
+                    {typeof message.content === 'string'
+                      ? message.content
+                      : JSON.stringify(message.content, null, 2)}
                   </pre>
                 </div>
               )
@@ -92,7 +94,7 @@ export default function Home() {
                   <div>
                     <Bolt />
                   </div>
-                  <pre className='overflow-auto break-words whitespace-normal'>
+                  <pre className='overflow-auto break-words'>
                     {JSON.stringify(message.content, null, 2)}
                   </pre>
                 </div>

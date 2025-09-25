@@ -15,8 +15,7 @@ Rules:
 
 Example:
 Input: "This is a test. This is another test."
-PROCESS: ["This is a test. ", "This is another test."]
-Output: {result: [15]}
+Output: {result: ["This is a test. ", "This is another test."]}
 `
 
 const inputSchema = z.object({

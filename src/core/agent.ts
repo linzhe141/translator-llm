@@ -101,6 +101,9 @@ export class Agent {
   async workloop() {
     while (!this.workingMemory.isComplete) {
       await this.streamRequestLLM()
+      if (this.state === 'error') {
+        break
+      }
     }
     this.state = 'workflow_complete'
   }

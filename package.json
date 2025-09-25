@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@ai-sdk/deepseek": "^1.0.15",
+    "@ai-sdk/openai": "^2.0.35",
+    "@ai-sdk/openai-compatible": "^1.0.18",
     "@tailwindcss/vite": "^4.1.13",
     "ai": "^5.0.39",
     "lucide-react": "^0.544.0",

@@ -173,7 +173,7 @@ export class Agent {
       console.log('llm res', toolCalls, reasoning)
       let reasoningText = ''
       for await (const chunk of fullStream) {
-        console.log('text', chunk)
+        console.log('text', JSON.stringify(chunk, null, 2))
         if (chunk.type === 'reasoning-delta') {
           reasoningText += chunk.text
           const last = this.context.getMessages().at(-1)
@@ -192,11 +192,47 @@ export class Agent {
               },
             ])
           }
-        } else if (chunk.type === 'tool-call') {
+        } else if (chunk.type === 'tool-input-start') {
+          // 工具调用开始
           this.context.addMessage({
             role: 'assistant',
-            content: [chunk],
+            content: [
+              {
+                type: 'tool-call',
+                toolCallId: chunk.id,
+                toolName: chunk.toolName,
+                input: '',
+              },
+            ],
           })
+        } else if (chunk.type === 'tool-input-delta') {
+          // 工具调用参数流式更新
+          const last = this.context.getMessages().at(-1)
+          if (
+            !last ||
+            last.role !== 'assistant' ||
+            !Array.isArray(last.content)
+          )
+            return
+          const copy = last.content.map((i) => i)
+          copy[0].input += chunk.delta
+          const messages = this.context.getMessages()
+          this.context.setMessages([
+            ...messages.slice(0, messages.length - 1),
+            {
+              role: 'assistant',
+              content: copy,
+            },
+          ])
+        } else if (chunk.type === 'tool-call') {
+          const messages = this.context.getMessages()
+          this.context.setMessages([
+            ...messages.slice(0, messages.length - 1),
+            {
+              role: 'assistant',
+              content: [chunk],
+            },
+          ])
           await this.processToolCall(chunk)
         }
       }

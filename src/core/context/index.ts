@@ -116,15 +116,15 @@ export class Context {
           break
         }
         case 'assistant': {
-          const assistantItem = msg as AssistantModelMessage
+          const assistantItem = msg
           if (typeof assistantItem.content === 'string') {
-            messages.push(assistantItem)
+            messages.push(assistantItem as AssistantModelMessage)
           } else if (
             Array.isArray(assistantItem.content) &&
             assistantItem.content.length &&
             assistantItem.content[0].type === 'tool-call'
           ) {
-            messages.push(assistantItem)
+            messages.push(assistantItem as AssistantModelMessage)
           }
 
           break

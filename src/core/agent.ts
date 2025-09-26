@@ -1,17 +1,22 @@
-import { Context } from './context.js'
+import {
+  Context,
+  type AssistantMessageContext,
+  type ReasoningAssistantContent,
+  type ToolCallAssistantContent,
+  type ToolMessage,
+  type UserMessage,
+} from './context/index.js'
 import { createModels } from './llm.js'
 import {
   type LanguageModel,
-  type UserModelMessage,
   type ToolCallPart,
-  type ToolModelMessage,
   type ToolSet,
-  generateText,
+  // generateText,
   streamText,
 } from 'ai'
 import { systemPrompt } from './prompt/system.js'
 import { tools, toolsExecuter } from './tools'
-
+import { v4 as uuid } from 'uuid'
 //TODO 当语句调用完成后，不需要发送到llm了，
 export type WorkflowState =
   | 'idle'
@@ -91,9 +96,13 @@ export class Agent {
   rejectTask() {
     this._resolve?.({ status: 'rejected' })
   }
-  async userSubmit(message: UserModelMessage) {
+  async userSubmit(message: UserMessage) {
     this.state = 'user_input'
-    this.context.addMessage(message)
+    this.context.addMessage({
+      id: uuid(),
+      type: 'llm',
+      message: message,
+    })
     this.workingMemory = createInitialWorkingMemory(message.content as string)
     // await this.requestLLM()
     await this.workloop()
@@ -113,7 +122,7 @@ export class Agent {
     const taskResult = await executer()
     this.state = 'tool_result'
     console.log(taskResult)
-    const toApproveMessage: ToolModelMessage = {
+    const toApproveMessage: ToolMessage = {
       role: 'tool',
       content: [
         {
@@ -127,39 +136,43 @@ export class Agent {
         },
       ],
     }
-    this.context.addMessage(toApproveMessage)
+    this.context.addMessage({
+      id: uuid(),
+      type: 'llm',
+      message: toApproveMessage,
+    })
   }
 
   async requestLLM() {
-    try {
-      this.state = 'llm_response_pending'
-      const res = await generateText({
-        system: systemPrompt,
-        model: this.models.reasoning,
-        tools: this.tools,
-        messages: this.context.toModelMessages(),
-      })
-      this.state = 'llm_response_received'
-      console.log('llm res', res)
-      const { toolCalls, reasoning, text } = res
-      if (reasoning) {
-        console.log('reasoning', reasoning)
-      }
-      if (text) {
-        this.context.addMessage({ content: text, role: 'assistant' })
-      }
-      if (toolCalls.length) {
-        //TODO tool call only one by one
-        this.context.addMessage({
-          role: 'assistant',
-          content: toolCalls,
-        })
-        await this.processToolCall(toolCalls[0])
-      }
-    } catch (error) {
-      console.error(error)
-      this.state = 'error'
-    }
+    // try {
+    //   this.state = 'llm_response_pending'
+    //   const res = await generateText({
+    //     system: systemPrompt,
+    //     model: this.models.reasoning,
+    //     tools: this.tools,
+    //     messages: this.context.toModelMessages(),
+    //   })
+    //   this.state = 'llm_response_received'
+    //   console.log('llm res', res)
+    //   const { toolCalls, reasoning, text } = res
+    //   if (reasoning) {
+    //     console.log('reasoning', reasoning)
+    //   }
+    //   if (text) {
+    //     this.context.addMessage({ message: text, role: 'assistant' })
+    //   }
+    //   if (toolCalls.length) {
+    //     //TODO tool call only one by one
+    //     this.context.addMessage({
+    //       role: 'assistant',
+    //       message: toolCalls,
+    //     })
+    //     await this.processToolCall(toolCalls[0])
+    //   }
+    // } catch (error) {
+    //   console.error(error)
+    //   this.state = 'error'
+    // }
   }
   async streamRequestLLM() {
     try {
@@ -172,67 +185,79 @@ export class Agent {
       })
       console.log('llm res', toolCalls, reasoning)
       let reasoningText = ''
+      let toolCallInput = ''
       for await (const chunk of fullStream) {
         console.log('text', JSON.stringify(chunk, null, 2))
         if (chunk.type === 'reasoning-delta') {
           reasoningText += chunk.text
           const last = this.context.getMessages().at(-1)
-          if (last?.role === 'user') {
-            this.context.addMessage({
-              content: `<thinking>${reasoningText}</thinking>`,
-              role: 'assistant',
-            })
-          } else {
-            const messages = this.context.getMessages()
-            this.context.setMessages([
-              ...messages.slice(0, messages.length - 1),
+          if (!last) {
+            console.error('a internal error has occured')
+            return
+          }
+          // 新增 reason message
+          if (last.type === 'llm' && last.message.role === 'user') {
+            const message: AssistantMessageContext<ReasoningAssistantContent> =
               {
-                content: `<thinking>${reasoningText}</thinking>`,
-                role: 'assistant',
-              },
-            ])
+                id: uuid(),
+                type: 'llm',
+                message: {
+                  role: 'assistant',
+                  content: {
+                    type: 'reasoning',
+                    text: reasoningText,
+                  },
+                },
+              }
+            this.context.addMessage(message)
+          } else {
+            // update
+            const last = this.context.getMessages().at(-1)
+            if (!last || !this.context.isReasoningMessage(last)) {
+              console.error('a internal error has occured')
+              return
+            }
+            this.context.updateStreamReasoningMessage(last, reasoningText)
           }
         } else if (chunk.type === 'tool-input-start') {
           // 工具调用开始
-          this.context.addMessage({
-            role: 'assistant',
-            content: [
-              {
-                type: 'tool-call',
-                toolCallId: chunk.id,
-                toolName: chunk.toolName,
-                input: '',
+          const toolCallMessag: AssistantMessageContext<ToolCallAssistantContent> =
+            {
+              id: uuid(),
+              type: 'llm',
+              message: {
+                role: 'assistant',
+                content: [
+                  {
+                    type: 'tool-call',
+                    toolCallId: chunk.id,
+                    toolName: chunk.toolName,
+                    input: '',
+                  },
+                ],
               },
-            ],
-          })
+            }
+          this.context.addMessage(toolCallMessag)
         } else if (chunk.type === 'tool-input-delta') {
           // 工具调用参数流式更新
           const last = this.context.getMessages().at(-1)
-          if (
-            !last ||
-            last.role !== 'assistant' ||
-            !Array.isArray(last.content)
-          )
+          if (!last || !this.context.isToolCallMessage(last)) {
+            console.error('a internal error has occured')
             return
-          const copy = last.content.map((i) => i)
-          copy[0].input += chunk.delta
-          const messages = this.context.getMessages()
-          this.context.setMessages([
-            ...messages.slice(0, messages.length - 1),
-            {
-              role: 'assistant',
-              content: copy,
-            },
-          ])
+          }
+          toolCallInput += chunk.delta
+          this.context.updateStreamToolCallMessage(last, toolCallInput)
         } else if (chunk.type === 'tool-call') {
-          const messages = this.context.getMessages()
-          this.context.setMessages([
-            ...messages.slice(0, messages.length - 1),
+          const toolCallMessag: AssistantMessageContext<ToolCallAssistantContent> =
             {
-              role: 'assistant',
-              content: [chunk],
-            },
-          ])
+              id: uuid(),
+              type: 'llm',
+              message: {
+                role: 'assistant',
+                content: [chunk],
+              },
+            }
+          this.context.updateLastMessage(toolCallMessag)
           await this.processToolCall(chunk)
         }
       }

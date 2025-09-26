@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import type { ToolModelMessage } from 'ai'
 import { Bolt, Bot, MoveRight, UserRound } from 'lucide-react'
 import { NavLink } from 'react-router'
 import { useAgent } from '@/hooks/useAgent'
@@ -66,9 +65,9 @@ export default function Home() {
       ) : (
         <div>
           {messageList.map((i, index) => {
-            switch (i.role) {
+            switch (i.message.role) {
               case 'user': {
-                const message = i
+                const message = i.message
                 return (
                   <div
                     key={index}
@@ -78,7 +77,7 @@ export default function Home() {
                       <UserRound />
                     </div>
                     <pre className='overflow-auto break-words'>
-                      {message.content as string}
+                      {message.content}
                     </pre>
                   </div>
                 )
@@ -91,17 +90,15 @@ export default function Home() {
                       <Bot></Bot>
                     </div>
                     <pre className='overflow-auto break-words'>
-                      {typeof message.content === 'string'
-                        ? message.content
-                        : JSON.stringify(message.content, null, 2)}
+                      {typeof message.message === 'string'
+                        ? message.message
+                        : JSON.stringify(message.message, null, 2)}
                     </pre>
                   </div>
                 )
               }
               case 'tool': {
-                const message = i as ToolModelMessage & {
-                  status: 'approved' | 'rejected' | 'idle'
-                }
+                const message = i.message
                 return (
                   <div className='my-4 rounded-md border bg-[#3c3c3c] p-2 text-white'>
                     <div>

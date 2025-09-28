@@ -178,9 +178,13 @@ export default function Home() {
       {/* 输入区域 */}
       <div className='mb-6 space-y-4'>
         <div>
-          <label className='mb-2 block text-sm font-medium text-gray-700'>
-            请输入需要翻译的文本
+          <label className='mb-4 block text-4xl font-bold text-gray-700'>
+            AI Translator Agent
           </label>
+          <p className='mb-3 text-sm text-gray-600'>
+            基于大语言模型的Agent架构，具备上下文理解、多轮对话和智能决策能力。
+            支持复杂文本的语境分析和专业术语处理，提供更准确、自然的翻译结果。
+          </p>
           <textarea
             className='w-full resize-none rounded-lg border border-gray-300 p-4 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200'
             value={userInput}
@@ -188,7 +192,7 @@ export default function Home() {
             onKeyDown={handleKeyDown}
             rows={8}
             disabled={isProcessing}
-            placeholder='在此输入需要翻译的文本... (Ctrl+Enter 快速提交)'
+            placeholder='输入任意语言的文本，AI Agent将智能识别语言并提供精准翻译... (Ctrl+Enter 快速提交)'
           />
         </div>
 
@@ -201,7 +205,9 @@ export default function Home() {
           }`}
           onClick={handleTranslate}
         >
-          {isProcessing ? '翻译中...' : '开始翻译'}
+          {isProcessing
+            ? 'AI Translator Agent 分析处理中...'
+            : '启动 AI Translator Agent 翻译'}
         </button>
       </div>
 

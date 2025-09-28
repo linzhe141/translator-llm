@@ -8,9 +8,7 @@ import {
 interface IContext {
   id: string
 }
-interface ILLMContext extends IContext {
-  type: 'llm'
-}
+
 export interface StreamContext extends IContext {
   type: 'stream-chunk'
   message: {
@@ -21,6 +19,7 @@ export interface StreamContext extends IContext {
     input: string
   }
 }
+
 export type UserMessage = Omit<UserModelMessage, 'content'> & {
   content: string
 }
@@ -49,21 +48,26 @@ export type ToolMessage = ToolModelMessage
 //   type: 'llm'
 //   content: SystemMessage | UserMessage | AssistantMessage | ToolMessage
 // }
-export interface SystemMessageContext extends ILLMContext {
+export interface SystemMessageContext extends IContext {
+  type: 'system'
   message: SystemMessage
 }
 
-export interface UserMessageContext extends ILLMContext {
+export interface UserMessageContext extends IContext {
+  type: 'user'
   message: UserMessage
 }
 
-export interface ToolMessageContext extends ILLMContext {
+export interface ToolMessageContext extends IContext {
+  type: 'tool'
+  status: 'pending' | 'approved' | 'rejected'
   message: ToolMessage
 }
 
 export interface AssistantMessageContext<
   T extends AssistantContent = AssistantContent,
-> extends ILLMContext {
+> extends IContext {
+  type: 'assistant'
   message: AssistantMessage<T>
 }
 type LLMContext =
@@ -99,7 +103,10 @@ export class Context {
   toModelMessages(): ModelMessage[] {
     const filterMessages = this.messages
       .filter((i) => {
-        return i.type === 'llm'
+        if (i.type === 'assistant') return i
+        else if (i.type === 'system') return i
+        else if (i.type === 'user') return i
+        else if (i.type === 'tool' && i.status === 'approved') return i
       })
       .map((i) => i.message)
     const messages: ModelMessage[] = []
@@ -141,7 +148,7 @@ export class Context {
 
   isReasoningMessage(message: ContextMessage): boolean {
     if (
-      message.type === 'llm' &&
+      message.type === 'assistant' &&
       message.message.role === 'assistant' &&
       !Array.isArray(message.message.content) &&
       typeof message.message.content === 'object' &&
@@ -165,7 +172,7 @@ export class Context {
 
   isToolCallMessage(message: ContextMessage): boolean {
     if (
-      message.type === 'llm' &&
+      message.type === 'assistant' &&
       message.message.role === 'assistant' &&
       Array.isArray(message.message.content) &&
       message.message.content.length &&

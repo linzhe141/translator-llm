@@ -100,7 +100,7 @@ export class Agent {
     this.state = 'user_input'
     this.context.addMessage({
       id: uuid(),
-      type: 'llm',
+      type: 'user',
       message: message,
     })
     this.workingMemory = createInitialWorkingMemory(message.content as string)
@@ -138,7 +138,8 @@ export class Agent {
     }
     this.context.addMessage({
       id: uuid(),
-      type: 'llm',
+      type: 'tool',
+      status: 'approved',
       message: toApproveMessage,
     })
   }
@@ -196,11 +197,11 @@ export class Agent {
             return
           }
           // 新增 reason message
-          if (last.type === 'llm' && last.message.role === 'user') {
+          if (last.type === 'user') {
             const message: AssistantMessageContext<ReasoningAssistantContent> =
               {
                 id: uuid(),
-                type: 'llm',
+                type: 'assistant',
                 message: {
                   role: 'assistant',
                   content: {
@@ -224,7 +225,7 @@ export class Agent {
           const toolCallMessag: AssistantMessageContext<ToolCallAssistantContent> =
             {
               id: uuid(),
-              type: 'llm',
+              type: 'assistant',
               message: {
                 role: 'assistant',
                 content: [
@@ -251,7 +252,7 @@ export class Agent {
           const toolCallMessag: AssistantMessageContext<ToolCallAssistantContent> =
             {
               id: uuid(),
-              type: 'llm',
+              type: 'assistant',
               message: {
                 role: 'assistant',
                 content: [chunk],

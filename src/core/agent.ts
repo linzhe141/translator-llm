@@ -82,7 +82,10 @@ export class Agent {
   constructor(options: any) {
     this.options = options
   }
-
+  clear() {
+    this.context = new Context()
+    this.workingMemory = createInitialWorkingMemory()
+  }
   waitingToBeResolved(data: any): Promise<{ status: 'approved' | 'rejected' }> {
     this.options.setPendingResolveData(data)
     return new Promise<{ status: 'approved' | 'rejected' }>((resolve) => {

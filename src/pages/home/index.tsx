@@ -3,141 +3,235 @@ import { Bolt, Bot, MoveRight, UserRound } from 'lucide-react'
 import { NavLink } from 'react-router'
 import { useAgent } from '@/hooks/useAgent'
 
-export default function Home() {
-  const [useInput, setUserInput] = useState('')
-  const disabled = useInput.trim().length === 0
+// 消息组件
+const MessageItem = ({ message, index }: { message: any; index: number }) => {
+  const baseClasses = 'my-4 rounded-md border p-4'
 
-  const { agent, pendingResolveData, messageList, state } = useAgent()
-  // @ts-expect-error just for testing
-  window.agent = agent.current
+  switch (message.message?.role || message.type) {
+    case 'user':
+      return (
+        <div
+          key={index}
+          className={`${baseClasses} border-blue-200 bg-blue-50`}
+        >
+          <div className='mb-2 flex items-center gap-2'>
+            <UserRound className='h-5 w-5 text-blue-600' />
+            <span className='text-sm font-medium text-blue-700'>用户</span>
+          </div>
+          <pre className='overflow-auto break-words whitespace-pre-wrap text-gray-800'>
+            {message.message.content}
+          </pre>
+        </div>
+      )
 
-  console.log('messageList', messageList)
+    case 'assistant':
+      return (
+        <div
+          key={index}
+          className={`${baseClasses} border-green-200 bg-green-50`}
+        >
+          <div className='mb-2 flex items-center gap-2'>
+            <Bot className='h-5 w-5 text-green-600' />
+            <span className='text-sm font-medium text-green-700'>助手</span>
+          </div>
+          <pre className='overflow-auto break-words whitespace-pre-wrap text-gray-800'>
+            {typeof message.message === 'string'
+              ? message.message
+              : JSON.stringify(message.message, null, 2)}
+          </pre>
+        </div>
+      )
+
+    case 'tool':
+      return (
+        <div
+          key={index}
+          className={`${baseClasses} border-gray-300 bg-gray-100`}
+        >
+          <div className='mb-2 flex items-center gap-2'>
+            <Bolt className='h-5 w-5 text-gray-600' />
+            <span className='text-sm font-medium text-gray-700'>工具调用</span>
+          </div>
+          <pre className='overflow-auto text-sm break-words whitespace-pre-wrap text-gray-800'>
+            {JSON.stringify(message.message.content, null, 2)}
+          </pre>
+        </div>
+      )
+
+    default:
+      return null
+  }
+}
+
+// 翻译结果组件
+const TranslationResult = ({ agent }: { agent: any }) => {
+  const originalText = agent.current.workingMemory.originalText
+  const translatedText =
+    agent.current.workingMemory.translationResults
+      ?.map((item: any) => item.translated)
+      .join('') || ''
+
   return (
-    <div className='mx-auto my-4 w-[1000px]'>
-      <div className='my-4'>
+    <div className='mt-6 space-y-4'>
+      <h3 className='text-lg font-semibold text-gray-800'>翻译结果</h3>
+      <div className='grid grid-cols-1 gap-4 lg:grid-cols-2'>
+        <div className='space-y-2'>
+          <h4 className='text-sm font-medium text-gray-600'>原文</h4>
+          <div className='min-h-[200px] rounded-lg border border-gray-300 bg-gray-50 p-4'>
+            <pre className='font-mono text-sm whitespace-pre-wrap text-gray-800'>
+              {originalText}
+            </pre>
+          </div>
+        </div>
+        <div className='space-y-2'>
+          <h4 className='text-sm font-medium text-gray-600'>译文</h4>
+          <div className='min-h-[200px] rounded-lg border border-gray-300 bg-blue-50 p-4'>
+            <pre className='font-mono text-sm whitespace-pre-wrap text-gray-800'>
+              {translatedText}
+            </pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// 待审核内容组件
+const PendingReview = ({
+  pendingResolveData,
+  agent,
+}: {
+  pendingResolveData: any
+  agent: any
+}) => (
+  <div className='mt-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4'>
+    <h4 className='mb-3 text-lg font-medium text-yellow-800'>待审核内容</h4>
+    <div className='mb-4 rounded border bg-white p-3 text-sm'>
+      <pre className='overflow-auto whitespace-pre-wrap'>
+        {JSON.stringify(pendingResolveData, null, 2)}
+      </pre>
+    </div>
+    <div className='flex gap-3'>
+      <button
+        className='rounded bg-green-500 px-4 py-2 text-white transition-colors hover:bg-green-600'
+        onClick={() => agent.current.resolveTask()}
+      >
+        通过
+      </button>
+      <button
+        className='rounded bg-red-500 px-4 py-2 text-white transition-colors hover:bg-red-600'
+        onClick={() => agent.current.rejectTask()}
+      >
+        拒绝
+      </button>
+    </div>
+  </div>
+)
+
+export default function Home() {
+  const [userInput, setUserInput] = useState('')
+  const { agent, pendingResolveData, messageList, state } = useAgent()
+
+  // 开发环境下暴露agent到window对象
+  if (process.env.NODE_ENV === 'development') {
+    // @ts-expect-error just for testing
+    window.agent = agent.current
+  }
+
+  const disabled = userInput.trim().length === 0
+  const isProcessing = state !== 'workflow_complete' && state !== 'idle'
+
+  const handleTranslate = () => {
+    if (disabled) return
+
+    // 清空agent上下文 - 这是关键改进
+    if (agent.current.clear) {
+      agent.current.clear()
+    }
+
+    // 提交用户输入
+    agent.current.userSubmit({
+      content: userInput,
+      role: 'user',
+    })
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && e.ctrlKey && !disabled) {
+      handleTranslate()
+    }
+  }
+
+  return (
+    <div className='mx-auto my-6 max-w-6xl px-4'>
+      {/* 顶部导航 */}
+      <div className='mb-6'>
         <NavLink
           to='/settings'
-          className='flex w-[100px] items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 hover:bg-blue-200'
+          className='inline-flex items-center gap-2 rounded-full bg-blue-50 px-4 py-2 text-blue-600 transition-colors hover:bg-blue-100'
         >
-          <MoveRight className='h-4 w-4 text-blue-500' />
-          <span className='text-sm font-medium text-blue-600'>settings</span>
+          <MoveRight className='h-4 w-4' />
+          <span className='text-sm font-medium'>settings</span>
         </NavLink>
       </div>
 
-      <textarea
-        className='w-full resize-none rounded-md border border-gray-300 p-2 outline-0 focus:border-blue-700'
-        value={useInput}
-        onChange={(e) => setUserInput(e.target.value)}
-        rows={10}
-        disabled={state !== 'workflow_complete' && state !== 'idle'}
-        placeholder='Write some text you want to translate here...'
-      />
-      <button
-        disabled={disabled}
-        className={`w-full rounded-md border bg-blue-500 p-2 text-white ${
-          disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-blue-600'
-        }`}
-        onClick={() => {
-          // console.log('useInput', useInput)
-          // // navigate('/settings')
-          // setContent(originText)
-          // mockResponse()
-          agent.current.userSubmit({
-            content: useInput,
-            role: 'user',
-          })
-        }}
-      >
-        translate
-      </button>
-
-      {state === 'workflow_complete' ? (
-        <div className='mt-2 flex gap-2'>
-          <pre className='w-0 flex-1 overflow-auto rounded border border-gray-300 p-2 whitespace-pre-line'>
-            {agent.current.workingMemory.originalText}
-          </pre>
-          <pre className='w-0 flex-1 overflow-auto rounded border border-gray-300 p-2 whitespace-pre-line'>
-            {agent.current.workingMemory.translationResults
-              .map((i) => i.translated)
-              .join('')}
-          </pre>
-        </div>
-      ) : (
+      {/* 输入区域 */}
+      <div className='mb-6 space-y-4'>
         <div>
-          {messageList.map((i, index) => {
-            switch (i.message.role) {
-              case 'user': {
-                const message = i.message
-                return (
-                  <div
-                    key={index}
-                    className='my-4 rounded-md border bg-blue-100 p-2'
-                  >
-                    <div>
-                      <UserRound />
-                    </div>
-                    <pre className='overflow-auto break-words'>
-                      {message.content}
-                    </pre>
-                  </div>
-                )
-              }
-              case 'assistant': {
-                const message = i
-                return (
-                  <div className='my-4 rounded-md border bg-blue-500 p-2 text-white'>
-                    <div>
-                      <Bot></Bot>
-                    </div>
-                    <pre className='overflow-auto break-words'>
-                      {typeof message.message === 'string'
-                        ? message.message
-                        : JSON.stringify(message.message, null, 2)}
-                    </pre>
-                  </div>
-                )
-              }
-              case 'tool': {
-                const message = i.message
-                return (
-                  <div className='my-4 rounded-md border bg-[#3c3c3c] p-2 text-white'>
-                    <div>
-                      <Bolt />
-                    </div>
-                    <pre className='overflow-auto break-words'>
-                      {JSON.stringify(message.content, null, 2)}
-                    </pre>
-                  </div>
-                )
-              }
-            }
-          })}
-          <div>agent state: {state} </div>
-          {pendingResolveData && (
-            <div>
-              <div>待审核内容：</div>
-              <div>{JSON.stringify(pendingResolveData, null, 2)}</div>
-              <div className='mt-2 flex gap-2'>
-                <button
-                  className='rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700'
-                  onClick={() => {
-                    agent.current.resolveTask()
-                  }}
-                >
-                  通过
-                </button>
-                <button
-                  className='rounded bg-red-500 px-4 py-2 font-bold text-white hover:bg-red-700'
-                  onClick={() => {
-                    agent.current.rejectTask()
-                  }}
-                >
-                  拒绝
-                </button>
-              </div>
-            </div>
-          )}
+          <label className='mb-2 block text-sm font-medium text-gray-700'>
+            请输入需要翻译的文本
+          </label>
+          <textarea
+            className='w-full resize-none rounded-lg border border-gray-300 p-4 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200'
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            rows={8}
+            disabled={isProcessing}
+            placeholder='在此输入需要翻译的文本... (Ctrl+Enter 快速提交)'
+          />
         </div>
+
+        <button
+          disabled={disabled || isProcessing}
+          className={`w-full rounded-lg px-6 py-3 font-medium transition-all ${
+            disabled || isProcessing
+              ? 'cursor-not-allowed bg-gray-300 text-gray-500'
+              : 'cursor-pointer bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700'
+          }`}
+          onClick={handleTranslate}
+        >
+          {isProcessing ? '翻译中...' : '开始翻译'}
+        </button>
+      </div>
+
+      {/* 状态指示器 */}
+      {state && state !== 'idle' && (
+        <div className='mb-4 rounded-lg bg-blue-50 px-4 py-2'>
+          <span className='text-sm text-blue-700'>
+            当前状态: <span className='font-medium'>{state}</span>
+          </span>
+        </div>
+      )}
+
+      {/* 翻译完成后显示结果 */}
+      {state === 'workflow_complete' && <TranslationResult agent={agent} />}
+
+      {/* 消息历史 */}
+      {messageList.length > 0 && state !== 'workflow_complete' && (
+        <div className='space-y-4'>
+          <h3 className='text-lg font-semibold text-gray-800'>处理过程</h3>
+          <div className='space-y-2'>
+            {messageList.map((message, index) => (
+              <MessageItem key={index} message={message} index={index} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 待审核内容 */}
+      {pendingResolveData && (
+        <PendingReview pendingResolveData={pendingResolveData} agent={agent} />
       )}
     </div>
   )

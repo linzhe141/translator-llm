@@ -1,4 +1,4 @@
-import { tool } from 'ai'
+import { tool, type ToolCallPart } from 'ai'
 import { z } from 'zod'
 import type { Agent } from '../agent'
 
@@ -56,7 +56,8 @@ function splitByIndices(text: string, indices: number[]): string[] {
 
 export const splitExecutor = async (
   input: z.infer<typeof inputSchema>,
-  agent: Agent
+  agent: Agent,
+  _toolCall: ToolCallPart
 ) => {
   const indices = getBoundaryIndices(input.text)
   console.log('split indices', indices)

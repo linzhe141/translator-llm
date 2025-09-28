@@ -54,6 +54,7 @@ function createInitialWorkingMemory(originalText?: string): WorkingMemory {
     isComplete: false,
   }
 }
+
 export class Agent {
   // Agent 的工作记忆
   workingMemory: WorkingMemory = createInitialWorkingMemory()
@@ -122,6 +123,7 @@ export class Agent {
     const taskResult = await executer()
     this.state = 'tool_result'
     console.log(taskResult)
+
     const toApproveMessage: ToolMessage = {
       role: 'tool',
       content: [
@@ -144,37 +146,6 @@ export class Agent {
     })
   }
 
-  async requestLLM() {
-    // try {
-    //   this.state = 'llm_response_pending'
-    //   const res = await generateText({
-    //     system: systemPrompt,
-    //     model: this.models.reasoning,
-    //     tools: this.tools,
-    //     messages: this.context.toModelMessages(),
-    //   })
-    //   this.state = 'llm_response_received'
-    //   console.log('llm res', res)
-    //   const { toolCalls, reasoning, text } = res
-    //   if (reasoning) {
-    //     console.log('reasoning', reasoning)
-    //   }
-    //   if (text) {
-    //     this.context.addMessage({ message: text, role: 'assistant' })
-    //   }
-    //   if (toolCalls.length) {
-    //     //TODO tool call only one by one
-    //     this.context.addMessage({
-    //       role: 'assistant',
-    //       message: toolCalls,
-    //     })
-    //     await this.processToolCall(toolCalls[0])
-    //   }
-    // } catch (error) {
-    //   console.error(error)
-    //   this.state = 'error'
-    // }
-  }
   async streamRequestLLM() {
     try {
       this.state = 'llm_response_pending'
@@ -270,17 +241,6 @@ export class Agent {
   async processToolCall(toolCall: ToolCallPart) {
     const executer = this.toolsExecuter[toolCall.toolName]
     if (!executer) return
-    const toolName = toolCall.toolName
-    if (toolName === 'translate') {
-      for (const input of this.workingMemory.splitTexts) {
-        await this.execToolCall(
-          () => executer({ src_string: input }, this),
-          toolCall
-        )
-      }
-      this.workingMemory.isComplete = true
-    } else {
-      await this.execToolCall(() => executer(toolCall.input, this), toolCall)
-    }
+    await this.execToolCall(() => executer(toolCall.input, this), toolCall)
   }
 }

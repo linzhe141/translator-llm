@@ -1,4 +1,4 @@
-import { tool, generateText } from 'ai'
+import { tool, generateText, type ToolCallPart } from 'ai'
 import { z } from 'zod'
 import type { Agent } from '../agent'
 
@@ -21,74 +21,105 @@ Rules (MUST FOLLOW STRICTLY):
 5. Output **only the translated text**, no commentary, no explanation.  
 `
 
-const rejectedItems: Record<string, string[]> = {}
 const inputSchema = z.object({
-  src_string: z.string().describe('The PARTIAL source string to translate'),
+  splits: z.array(
+    z.string().describe('The PARTIAL source string to translate')
+  ),
 })
 
-const outputSchema = z.object({
-  translated_string: z
-    .string()
-    .describe('The translated string, with human review applied'),
-})
 export const translateTool = tool({
   name: 'translate',
   description,
   inputSchema,
-  outputSchema,
 })
 
+export interface TranslateToolResultMeta {
+  status: 'approved' | 'rejected'
+  original: string
+  translated: string
+  rejectionCount?: number
+}
 export const translateExecutor = async (
   input: z.infer<typeof inputSchema>,
-  agent: Agent
+  agent: Agent,
+  _toolCall: ToolCallPart
 ) => {
-  const result = await auditTranslate(input.src_string, agent)
-  return { translated_string: result }
-}
+  const meta: TranslateToolResultMeta[] = []
+  let rejected: Record<string, string[]> = null!
+  const response: string[] = []
+  let leading = ''
+  let coreText = ''
+  let trailing = ''
+  for (const split of input.splits) {
+    rejected = {}
+    const match = split.match(/^(\s*)(.*?)(\s*)$/s) // s 修饰符让 . 匹配换行
+    leading = match?.[1] ?? ''
+    coreText = match?.[2] ?? ''
+    trailing = match?.[3] ?? ''
+    const result = await auditTranslate(coreText)
+    response.push(result)
+  }
+  agent.workingMemory.isComplete = true
 
-async function translateSentence(sentence: string, agent: Agent) {
-  const res = await generateText({
-    model: agent.models.tool,
-    system: `${description}
+  return {
+    content: response,
+    meta,
+  }
+  async function auditTranslate(sentence: string) {
+    const translatedCore = await translateSentence(sentence)
+    let translated = leading + translatedCore + trailing
+    const { status } = await agent.waitingToBeResolved({
+      sentence,
+      translated,
+      meta,
+    })
+    if (status === 'approved') {
+      // mark complete
+      agent.workingMemory.currentTranslationIndex++
+      agent.workingMemory.translationResults.push({
+        original: sentence,
+        translated: translated,
+        approved: true,
+        rejectionCount: rejected[sentence]?.length || 0,
+      })
+      meta.push({
+        status: 'approved',
+        original: sentence,
+        translated: translated,
+      })
+    } else {
+      if (rejected[sentence]) {
+        rejected[sentence].push(translated)
+      } else {
+        rejected[sentence] = [translated]
+      }
+
+      meta.push({
+        status: 'rejected',
+        original: sentence,
+        translated: translated,
+        rejectionCount: rejected[sentence]?.length || 0,
+      })
+      translated = await auditTranslate(sentence)
+    }
+
+    return translated
+  }
+  async function translateSentence(sentence: string) {
+    const res = await generateText({
+      model: agent.models.tool,
+      system: `${description}
     ${
-      Object.keys(rejectedItems).length > 0
+      Object.keys(rejected).length > 0
         ? `
 ### This is <original-sentence>${sentence}</original-sentence> that had translation issues:
 The following sentences were previously rejected by human reviewers
-${rejectedItems[sentence].map((i) => `- <rejected-translated>${i}</rejected-translated>`).join('\n')}
+${rejected[sentence].map((i) => `- <rejected-translated>${i}</rejected-translated>`).join('\n')}
 Please avoid similar mistakes. `
         : ''
     }`,
-    prompt: `translate this sentence: ${sentence}`,
-  })
-  return res.text
-}
-
-async function auditTranslate(sentence: string, agent: Agent) {
-  const match = sentence.match(/^(\s*)(.*?)(\s*)$/s) // s 修饰符让 . 匹配换行
-  const leading = match?.[1] ?? ''
-  const coreText = match?.[2] ?? ''
-  const trailing = match?.[3] ?? ''
-  const translatedCore = await translateSentence(coreText, agent)
-  let translated = leading + translatedCore + trailing
-  const { status } = await agent.waitingToBeResolved({ sentence, translated })
-  if (status === 'approved') {
-    // mark complete
-    agent.workingMemory.currentTranslationIndex++
-    agent.workingMemory.translationResults.push({
-      original: sentence,
-      translated: translated,
-      approved: true,
-      rejectionCount: rejectedItems[sentence]?.length || 0,
+      prompt: `translate this sentence: ${sentence}`,
     })
-    delete rejectedItems[sentence]
-  } else {
-    if (rejectedItems[sentence]) {
-      rejectedItems[sentence].push(translated)
-    } else {
-      rejectedItems[sentence] = [translated]
-    }
-    translated = await auditTranslate(sentence, agent)
+    return res.text
   }
-  return translated
 }

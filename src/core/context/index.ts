@@ -5,6 +5,8 @@ import {
   type ToolModelMessage,
   type UserModelMessage,
 } from 'ai'
+import { isObject } from '@/utils'
+
 interface IContext {
   id: string
 }
@@ -62,6 +64,7 @@ export interface ToolMessageContext extends IContext {
   type: 'tool'
   status: 'pending' | 'approved' | 'rejected'
   message: ToolMessage
+  meta?: any
 }
 
 export interface AssistantMessageContext<
@@ -138,7 +141,17 @@ export class Context {
         }
         case 'tool': {
           const toolItem = msg as ToolModelMessage
-          messages.push(toolItem)
+          messages.push({
+            ...toolItem,
+            content: toolItem.content.map((i) => {
+              if (isObject(i.output.value)) {
+                // @ts-expect-error 不需要把 一些tool-result得运行时数据发送到LLM
+                const { meta: _meta, ...rest } = i.output.value
+                i.output.value = { ...rest }
+              }
+              return i
+            }),
+          })
           break
         }
       }

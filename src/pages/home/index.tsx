@@ -1,8 +1,19 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Bolt, Bot, MoveRight, UserRound } from 'lucide-react'
 import { NavLink } from 'react-router'
 import { useAgent } from '@/hooks/useAgent'
 
+const isElementInContainer = (element: HTMLElement, container: HTMLElement) => {
+  const elementRect = element.getBoundingClientRect()
+  const containerRect = container.getBoundingClientRect()
+
+  return (
+    elementRect.top >= containerRect.top &&
+    elementRect.left >= containerRect.left &&
+    elementRect.bottom <= containerRect.bottom &&
+    elementRect.right <= containerRect.right
+  )
+}
 // 消息组件
 const MessageItem = ({ message, index }: { message: any; index: number }) => {
   const baseClasses = 'my-4 rounded-md border p-4'
@@ -63,14 +74,86 @@ const MessageItem = ({ message, index }: { message: any; index: number }) => {
   }
 }
 
+interface Result {
+  origin: string
+  translate: string
+  active: boolean
+  rejectionCount: number
+}
 // 翻译结果组件
-const TranslationResult = ({ agent }: { agent: any }) => {
-  const originalText = agent.current.workingMemory.originalText
-  const translatedText =
-    agent.current.workingMemory.translationResults
-      ?.map((item: any) => item.translated)
-      .join('') || ''
+const TranslationResult = ({ result }: { result: Result[] }) => {
+  const mouseEnterTargetType = useRef<'origin' | 'translate' | null>(null)
+  const originRefs = useRef<Map<any, any>>(new Map())
+  const translateRefs = useRef<Map<any, any>>(new Map())
+  const originContainerRef = useRef<any>(null)
+  const translateContainerRef = useRef<any>(null)
+  const [textSegments, setTextSegments] = useState(result)
+  const handleScroll = (type: 'origin' | 'translate') => {
+    if (mouseEnterTargetType.current === 'origin' && type === 'translate')
+      return
+    if (mouseEnterTargetType.current === 'translate' && type === 'origin')
+      return
+    console.log(type)
 
+    const container = originContainerRef.current
+    const translateContainer = translateContainerRef.current
+    if (!container || !translateContainer) return
+
+    const refs = type === 'origin' ? originRefs : translateRefs
+    const targetRefs = type === 'origin' ? translateRefs : originRefs
+    // 找到第一个完全在视窗中的 span
+    for (const item of textSegments) {
+      const el = refs.current.get(item)
+      if (!el) continue
+      const rect = el.getBoundingClientRect()
+      const containerRect = container.getBoundingClientRect()
+      if (
+        rect.top >= containerRect.top + 100 &&
+        rect.bottom <= containerRect.bottom - 100
+      ) {
+        // 滚动对应的翻译
+        const targetEl = targetRefs.current.get(item)
+        if (targetEl) {
+          targetEl.scrollIntoView({ behavior: 'auto', block: 'nearest' })
+        }
+        break
+      }
+    }
+  }
+  function alignSourceMap(
+    data: {
+      origin: string
+      translate: string
+      active: boolean
+    },
+    type: 'origin' | 'translate'
+  ) {
+    const target = textSegments.find((i) => i === data)
+    if (target) {
+      target.active = true
+    }
+    setTextSegments(
+      textSegments.slice(0).map((i) => {
+        return { ...i, active: i === target }
+      })
+    )
+    const refs = type === 'origin' ? translateRefs : originRefs
+    const container =
+      type === 'origin'
+        ? translateContainerRef.current
+        : originContainerRef.current
+    const el = refs.current.get(data)
+    if (el && !isElementInContainer(el, container)) {
+      el.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
+  function cancelAlignSourceMap() {
+    setTextSegments(
+      textSegments.slice(0).map((i) => {
+        return { ...i, active: false }
+      })
+    )
+  }
   return (
     <div className='mt-6 space-y-4'>
       <h3 className='text-lg font-semibold text-gray-800'>翻译结果</h3>
@@ -78,16 +161,52 @@ const TranslationResult = ({ agent }: { agent: any }) => {
         <div className='space-y-2'>
           <h4 className='text-sm font-medium text-gray-600'>原文</h4>
           <div className='min-h-[200px] rounded-lg border border-gray-300 bg-gray-50 p-4'>
-            <pre className='font-mono text-sm whitespace-pre-wrap text-gray-800'>
-              {originalText}
+            <pre
+              className='font-mono text-sm whitespace-pre-wrap text-gray-800'
+              ref={originContainerRef}
+              onScroll={() => {
+                handleScroll('origin')
+              }}
+              onMouseEnter={() => (mouseEnterTargetType.current = 'origin')}
+              onMouseLeave={() => (mouseEnterTargetType.current = null)}
+            >
+              {textSegments.map((item) => (
+                <span
+                  className={`hover:bg-amber-100 ${item.active ? 'bg-amber-100' : ''}`}
+                  onMouseEnter={() => alignSourceMap(item, 'origin')}
+                  onMouseLeave={() => cancelAlignSourceMap()}
+                  ref={(el) => {
+                    originRefs.current.set(item, el)
+                  }}
+                >
+                  {item.origin}
+                </span>
+              ))}
             </pre>
           </div>
         </div>
         <div className='space-y-2'>
           <h4 className='text-sm font-medium text-gray-600'>译文</h4>
           <div className='min-h-[200px] rounded-lg border border-gray-300 bg-blue-50 p-4'>
-            <pre className='font-mono text-sm whitespace-pre-wrap text-gray-800'>
-              {translatedText}
+            <pre
+              className='font-mono text-sm whitespace-pre-wrap text-gray-800'
+              ref={translateContainerRef}
+              onScroll={() => handleScroll('translate')}
+              onMouseEnter={() => (mouseEnterTargetType.current = 'translate')}
+              onMouseLeave={() => (mouseEnterTargetType.current = null)}
+            >
+              {textSegments.map((item) => (
+                <span
+                  className={`hover:bg-amber-100 ${item.active ? 'bg-amber-100' : ''}`}
+                  onMouseEnter={() => alignSourceMap(item, 'translate')}
+                  onMouseLeave={() => cancelAlignSourceMap()}
+                  ref={(el) => {
+                    translateRefs.current.set(item, el)
+                  }}
+                >
+                  {item.translate}
+                </span>
+              ))}
             </pre>
           </div>
         </div>
@@ -221,7 +340,16 @@ export default function Home() {
       )}
 
       {/* 翻译完成后显示结果 */}
-      {state === 'workflow_complete' && <TranslationResult agent={agent} />}
+      {state === 'workflow_complete' && (
+        <TranslationResult
+          result={agent.current.workingMemory.translationResults.map((i) => ({
+            origin: i.original,
+            translate: i.translated,
+            active: false,
+            rejectionCount: i.rejectionCount,
+          }))}
+        />
+      )}
 
       {/* 消息历史 */}
       {messageList.length > 0 && state !== 'workflow_complete' && (

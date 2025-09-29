@@ -68,6 +68,7 @@ export const translateExecutor = async (
   async function auditTranslate(sentence: string) {
     const translatedCore = await translateSentence(sentence)
     let translated = leading + translatedCore + trailing
+    const original = leading + sentence + trailing
     const { status } = await agent.waitingToBeResolved({
       sentence,
       translated,
@@ -77,15 +78,15 @@ export const translateExecutor = async (
       // mark complete
       agent.workingMemory.currentTranslationIndex++
       agent.workingMemory.translationResults.push({
-        original: sentence,
-        translated: translated,
+        original,
+        translated,
         approved: true,
         rejectionCount: rejected[sentence]?.length || 0,
       })
       meta.push({
         status: 'approved',
-        original: sentence,
-        translated: translated,
+        original,
+        translated,
       })
     } else {
       if (rejected[sentence]) {
@@ -96,8 +97,8 @@ export const translateExecutor = async (
 
       meta.push({
         status: 'rejected',
-        original: sentence,
-        translated: translated,
+        original,
+        translated,
         rejectionCount: rejected[sentence]?.length || 0,
       })
       translated = await auditTranslate(sentence)

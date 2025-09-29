@@ -1,0 +1,46 @@
+import type { ToolCallPart } from 'ai'
+import { type Agent } from '.'
+import type { ToolMessage } from '../context'
+import { v4 as uuid } from 'uuid'
+
+export class ToolExecutor {
+  private agent: Agent = null!
+  private toolsExecuter: Record<string, (...args: any[]) => any> = null!
+  constructor(agent: Agent) {
+    this.agent = agent
+    this.toolsExecuter = agent.toolsExecuter
+  }
+  // 上下文会被 clear 所以每次需要获取最新的 context
+  get context() {
+    return this.agent.context
+  }
+  async execute(toolCall: ToolCallPart) {
+    const executer = this.toolsExecuter[toolCall.toolName]
+    if (!executer) return
+    this.agent.state = 'tool_executing'
+    const taskResult = await executer(toolCall.input, this.agent, toolCall)
+    this.agent.state = 'tool_result'
+
+    const toApproveMessage: ToolMessage = {
+      role: 'tool',
+      content: [
+        {
+          type: 'tool-result',
+          toolCallId: toolCall.toolCallId,
+          toolName: toolCall.toolName,
+          output: {
+            type: 'json',
+            value: taskResult,
+          },
+        },
+      ],
+    }
+
+    this.context.addMessage({
+      id: uuid(),
+      type: 'tool',
+      status: 'approved',
+      message: toApproveMessage,
+    })
+  }
+}

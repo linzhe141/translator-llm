@@ -1,69 +1,51 @@
-# React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# AI Translator Agent
 
-Currently, two official plugins are available:
+A powerful translation application powered by Large Language Model (LLM) agents, featuring context understanding, multi-turn dialogue, and intelligent decision-making capabilities.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## Expanding the ESLint configuration
+- **AI Agent Architecture**: Built on a sophisticated agent system with autonomous decision-making
+- **Human-in-the-loop**: Manual review and approval workflow for translation quality control
+- **Smart Text Segmentation**: Automatically splits text into meaningful segments while preserving structure
+- **Context-Aware Translation**: Maintains context across segments for accurate, natural translations
+- **Interactive Source Mapping**: Hover and scroll synchronization between original and translated text
+- **Iterative Refinement**: Reject and regenerate translations until satisfied
+- **Multi-language Support**: Automatically detects source language and translates to target language (default: English)
+- **Persistent Settings**: Your API configuration is saved locally
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Architecture
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+The application follows an agent-based workflow:
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+User Input → Split Tool → Translate Tool → Human Review → Final Result
+                                              ↓ (if rejected)
+                                           Retry Translation
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Tools
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+**Split Tool**  
+Intelligently segments text into natural language units while:
+- Preserving all formatting (whitespace, line breaks, punctuation)
+- Detecting sentence and paragraph boundaries
+- Maintaining original character order
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+**Translate Tool**  
+Translates text segments with:
+- Context preservation
+- Code block protection (no translation of code)
+- Formatting retention
+- Iterative refinement on rejection
+
+## Workflow
+
+1. **Text Submission**: User provides source text
+2. **Segmentation**: Split tool breaks text into manageable segments
+3. **Translation Loop**: For each segment:
+   - Translate using LLM
+   - Present to human reviewer
+   - If approved: Save and continue
+   - If rejected: Regenerate with feedback
+4. **Completion**: Display synchronized results with interactive mapping

@@ -18,10 +18,13 @@ A powerful translation application powered by Large Language Model (LLM) agents,
 
 The application follows an agent-based workflow:
 
-```
-User Input → Split Tool → Translate Tool → Human Review → Final Result
-                                              ↓ (if rejected)
-                                           Retry Translation
+```mermaid
+flowchart LR
+    A[User Input] --> B[Split Tool]
+    B --> C[Translate Tool]
+    C --> D[Human Review]
+    D -->|Approved| E[Final Result]
+    D -->|Rejected| C
 ```
 
 ## Tools

@@ -1,4 +1,4 @@
-name: Deploy playground to Pages
+name: Deploy to Pages
 
 on:
   push:
@@ -41,7 +41,7 @@ jobs:
         run: pnpm install
 
       - name: Build
-        run: pnpm run build:playground
+        run: pnpm run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -50,7 +50,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           # Upload dist folder
-          path: "./playground/dist"
+          path: "./dist"
 
       - name: Deploy to GitHub Pages
         id: deployment

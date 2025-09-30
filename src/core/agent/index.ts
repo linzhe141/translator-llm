@@ -1,7 +1,7 @@
 import { Context, type UserMessage } from '../context/index.js'
 import { createModels } from '../llm.js'
 import { type LanguageModel, type ToolCallPart, type ToolSet } from 'ai'
-import { tools, toolsExecuter } from '../tools'
+import { tools, toolsExecuter, toolsRenderer } from '../tools'
 import { v4 as uuid } from 'uuid'
 import {
   createInitialWorkingMemory,
@@ -9,6 +9,7 @@ import {
 } from './workingMemory.js'
 import { ToolExecutor } from './toolExecutor.js'
 import { LLMHandler } from './llmHandle.js'
+import type { ComponentType } from 'react'
 
 export type WorkflowState =
   | 'idle'
@@ -32,7 +33,7 @@ export class Agent {
     string,
     (input: any, agent: Agent, toolCall: ToolCallPart) => any
   > = toolsExecuter
-
+  toolsRenderer: Record<string, ComponentType> = toolsRenderer
   context: Context = new Context()
   workingMemory: WorkingMemory = createInitialWorkingMemory()
 

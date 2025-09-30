@@ -3,9 +3,11 @@ import {
   type ModelMessage,
   type SystemModelMessage,
   type ToolModelMessage,
+  type ToolResultPart,
   type UserModelMessage,
 } from 'ai'
 import { isObject } from '@/utils'
+import type { ComponentType } from 'react'
 
 interface IContext {
   id: string
@@ -45,7 +47,9 @@ export type AssistantMessage<T extends AssistantContent = AssistantContent> =
   }
 
 export type SystemMessage = SystemModelMessage
-export type ToolMessage = ToolModelMessage
+export type ToolMessage<P = object> = Omit<ToolModelMessage, 'content'> & {
+  content: Array<ToolResultPart & { renderer?: ComponentType<P> }>
+}
 // export interface LLMContext extends IContext {
 //   type: 'llm'
 //   content: SystemMessage | UserMessage | AssistantMessage | ToolMessage
@@ -73,12 +77,12 @@ export interface AssistantMessageContext<
   type: 'assistant'
   message: AssistantMessage<T>
 }
-type LLMContext =
+export type LLMContext =
   | SystemMessageContext
   | UserMessageContext
   | ToolMessageContext
   | AssistantMessageContext
-type ContextMessage = LLMContext /* | StreamContext */
+export type ContextMessage = LLMContext /* | StreamContext */
 export class Context {
   subscribers = new Set<any>()
   private messages: ContextMessage[] = []

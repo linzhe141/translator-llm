@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Bolt, Bot, MoveRight, UserRound } from 'lucide-react'
 import { NavLink } from 'react-router'
 import { useAgent } from '@/hooks/useAgent'
+import type { ContextMessage } from '@/core/context'
 
 const isElementInContainer = (element: HTMLElement, container: HTMLElement) => {
   const elementRect = element.getBoundingClientRect()
@@ -15,10 +16,16 @@ const isElementInContainer = (element: HTMLElement, container: HTMLElement) => {
   )
 }
 // 消息组件
-const MessageItem = ({ message, index }: { message: any; index: number }) => {
+const MessageItem = ({
+  message,
+  index,
+}: {
+  message: ContextMessage
+  index: number
+}) => {
   const baseClasses = 'my-4 rounded-md border p-4'
 
-  switch (message.message?.role || message.type) {
+  switch (message.type) {
     case 'user':
       return (
         <div
@@ -27,7 +34,7 @@ const MessageItem = ({ message, index }: { message: any; index: number }) => {
         >
           <div className='mb-2 flex items-center gap-2'>
             <UserRound className='h-5 w-5 text-blue-600' />
-            <span className='text-sm font-medium text-blue-700'>用户</span>
+            <span className='text-sm font-medium text-blue-700'>Input</span>
           </div>
           <pre className='overflow-auto break-words whitespace-pre-wrap text-gray-800'>
             {message.message.content}
@@ -43,7 +50,9 @@ const MessageItem = ({ message, index }: { message: any; index: number }) => {
         >
           <div className='mb-2 flex items-center gap-2'>
             <Bot className='h-5 w-5 text-green-600' />
-            <span className='text-sm font-medium text-green-700'>助手</span>
+            <span className='text-sm font-medium text-green-700'>
+              assistant
+            </span>
           </div>
           <pre className='overflow-auto break-words whitespace-pre-wrap text-gray-800'>
             {typeof message.message === 'string'
@@ -61,7 +70,7 @@ const MessageItem = ({ message, index }: { message: any; index: number }) => {
         >
           <div className='mb-2 flex items-center gap-2'>
             <Bolt className='h-5 w-5 text-gray-600' />
-            <span className='text-sm font-medium text-gray-700'>工具调用</span>
+            <span className='text-sm font-medium text-gray-700'>tool</span>
           </div>
           <pre className='overflow-auto text-sm break-words whitespace-pre-wrap text-gray-800'>
             {JSON.stringify(message.message.content, null, 2)}

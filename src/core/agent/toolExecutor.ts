@@ -28,6 +28,7 @@ export class ToolExecutor {
           type: 'tool-result',
           toolCallId: toolCall.toolCallId,
           toolName: toolCall.toolName,
+          renderer: this.agent.toolsRenderer[toolCall.toolName],
           output: {
             type: 'json',
             value: taskResult,

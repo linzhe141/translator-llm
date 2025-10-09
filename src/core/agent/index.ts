@@ -33,7 +33,7 @@ export class Agent {
     string,
     (input: any, agent: Agent, toolCall: ToolCallPart) => any
   > = toolsExecuter
-  toolsRenderer: Record<string, ComponentType> = toolsRenderer
+  toolsRenderer: Record<string, ComponentType<any>> = toolsRenderer
   context: Context = new Context()
   workingMemory: WorkingMemory = createInitialWorkingMemory()
 

@@ -1,6 +1,6 @@
 import type { ToolCallPart } from 'ai'
 import { type Agent } from '.'
-import type { ToolMessage } from '../context'
+import type { ContextMessage, ToolMessage } from '../context'
 import { v4 as uuid } from 'uuid'
 
 export class ToolExecutor {
@@ -17,9 +17,7 @@ export class ToolExecutor {
   async execute(toolCall: ToolCallPart) {
     const executer = this.toolsExecuter[toolCall.toolName]
     if (!executer) return
-    this.agent.state = 'tool_executing'
-    const taskResult = await executer(toolCall.input, this.agent, toolCall)
-    this.agent.state = 'tool_result'
+    let taskResult = ''
 
     const toApproveMessage: ToolMessage = {
       role: 'tool',
@@ -36,12 +34,18 @@ export class ToolExecutor {
         },
       ],
     }
-
-    this.context.addMessage({
+    const contextMsg: ContextMessage = {
       id: uuid(),
       type: 'tool',
-      status: 'approved',
+      status: 'pending',
       message: toApproveMessage,
-    })
+    }
+    this.context.addMessage(contextMsg)
+    this.agent.state = 'tool_executing'
+    taskResult = await executer(toolCall.input, this.agent, toolCall)
+    contextMsg.status = 'approved'
+    contextMsg.message.content[0].output.value = taskResult
+    this.context.updateLastMessage(contextMsg)
+    this.agent.state = 'tool_result'
   }
 }

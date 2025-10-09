@@ -3,6 +3,7 @@ import { Bolt, Bot, MoveRight, UserRound } from 'lucide-react'
 import { NavLink } from 'react-router'
 import { useAgent } from '@/hooks/useAgent'
 import type { ContextMessage } from '@/core/context'
+import type { Agent } from '@/core/agent'
 
 const isElementInContainer = (element: HTMLElement, container: HTMLElement) => {
   const elementRect = element.getBoundingClientRect()
@@ -19,11 +20,16 @@ const isElementInContainer = (element: HTMLElement, container: HTMLElement) => {
 const MessageItem = ({
   message,
   index,
+  agent,
+  pendingResolveData,
 }: {
   message: ContextMessage
   index: number
+  agent: Agent
+  pendingResolveData: any
 }) => {
-  const baseClasses = 'my-4 rounded-md border p-4'
+  const baseClasses =
+    'my-4 rounded-md border p-4 text-muted-foreground font-mono text-sm leading-relaxed'
 
   switch (message.type) {
     case 'user':
@@ -64,17 +70,25 @@ const MessageItem = ({
 
     case 'tool':
       return (
-        <div
-          key={index}
-          className={`${baseClasses} border-gray-300 bg-gray-100`}
-        >
+        <div key={index} className={`${baseClasses} border-gray-300`}>
           <div className='mb-2 flex items-center gap-2'>
             <Bolt className='h-5 w-5 text-gray-600' />
             <span className='text-sm font-medium text-gray-700'>tool</span>
           </div>
-          <pre className='overflow-auto text-sm break-words whitespace-pre-wrap text-gray-800'>
-            {JSON.stringify(message.message.content, null, 2)}
-          </pre>
+          {message.message.content.map((i) => {
+            if (i.renderer)
+              return (
+                <i.renderer
+                  agent={agent}
+                  pendingResolveData={pendingResolveData}
+                />
+              )
+            return (
+              <pre className='overflow-auto text-sm break-words whitespace-pre-wrap text-gray-800'>
+                {JSON.stringify(i, null, 2)}
+              </pre>
+            )
+          })}
         </div>
       )
 
@@ -224,38 +238,6 @@ const TranslationResult = ({ result }: { result: Result[] }) => {
   )
 }
 
-// 待审核内容组件
-const PendingReview = ({
-  pendingResolveData,
-  agent,
-}: {
-  pendingResolveData: any
-  agent: any
-}) => (
-  <div className='mt-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4'>
-    <h4 className='mb-3 text-lg font-medium text-yellow-800'>待审核内容</h4>
-    <div className='mb-4 rounded border bg-white p-3 text-sm'>
-      <pre className='overflow-auto whitespace-pre-wrap'>
-        {JSON.stringify(pendingResolveData, null, 2)}
-      </pre>
-    </div>
-    <div className='flex gap-3'>
-      <button
-        className='rounded bg-green-500 px-4 py-2 text-white transition-colors hover:bg-green-600'
-        onClick={() => agent.current.resolveTask()}
-      >
-        通过
-      </button>
-      <button
-        className='rounded bg-red-500 px-4 py-2 text-white transition-colors hover:bg-red-600'
-        onClick={() => agent.current.rejectTask()}
-      >
-        拒绝
-      </button>
-    </div>
-  </div>
-)
-
 export default function Home() {
   const [userInput, setUserInput] = useState('')
   const { agent, pendingResolveData, messageList, state } = useAgent()
@@ -366,16 +348,19 @@ export default function Home() {
           <h3 className='text-lg font-semibold text-gray-800'>处理过程</h3>
           <div className='space-y-2'>
             {messageList.map((message, index) => (
-              <MessageItem key={index} message={message} index={index} />
+              <MessageItem
+                key={index}
+                message={message}
+                index={index}
+                agent={agent.current}
+                pendingResolveData={pendingResolveData}
+              />
             ))}
           </div>
         </div>
       )}
 
-      {/* 待审核内容 */}
-      {pendingResolveData && (
-        <PendingReview pendingResolveData={pendingResolveData} agent={agent} />
-      )}
+      <div className='h-[400px]'></div>
     </div>
   )
 }

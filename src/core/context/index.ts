@@ -47,7 +47,7 @@ export type AssistantMessage<T extends AssistantContent = AssistantContent> =
   }
 
 export type SystemMessage = SystemModelMessage
-export type ToolMessage<P = object> = Omit<ToolModelMessage, 'content'> & {
+export type ToolMessage<P = any> = Omit<ToolModelMessage, 'content'> & {
   content: Array<ToolResultPart & { renderer?: ComponentType<P> }>
 }
 // export interface LLMContext extends IContext {

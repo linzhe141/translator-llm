@@ -3,7 +3,6 @@ import { Bolt, Bot, MoveRight, UserRound, Loader2, Info } from 'lucide-react'
 import { NavLink } from 'react-router'
 import { useAgent } from '@/hooks/useAgent'
 import type { ContextMessage } from '@/core/context'
-import type { Agent } from '@/core/agent'
 
 const isElementInContainer = (element: HTMLElement, container: HTMLElement) => {
   const elementRect = element.getBoundingClientRect()
@@ -16,28 +15,15 @@ const isElementInContainer = (element: HTMLElement, container: HTMLElement) => {
     elementRect.right <= containerRect.right
   )
 }
-// 消息组件
-const MessageItem = ({
-  message,
-  index,
-  agent,
-  pendingResolveData,
-}: {
-  message: ContextMessage
-  index: number
-  agent: Agent
-  pendingResolveData: any
-}) => {
+
+const MessageItem = ({ message }: { message: ContextMessage }) => {
   const baseClasses =
     'my-4 rounded-md border p-4 text-muted-foreground font-mono text-sm leading-relaxed'
 
   switch (message.type) {
     case 'user':
       return (
-        <div
-          key={index}
-          className={`${baseClasses} border-blue-200 bg-blue-50`}
-        >
+        <div className={`${baseClasses} border-blue-200 bg-blue-50`}>
           <div className='mb-2 flex items-center gap-2'>
             <UserRound className='h-5 w-5 text-blue-600' />
             <span className='text-sm font-medium text-blue-700'>Input</span>
@@ -50,10 +36,7 @@ const MessageItem = ({
 
     case 'assistant':
       return (
-        <div
-          key={index}
-          className={`${baseClasses} border-green-200 bg-green-50`}
-        >
+        <div className={`${baseClasses} border-green-200 bg-green-50`}>
           <div className='mb-2 flex items-center gap-2'>
             <Bot className='h-5 w-5 text-green-600' />
             <span className='text-sm font-medium text-green-700'>
@@ -70,19 +53,13 @@ const MessageItem = ({
 
     case 'tool':
       return (
-        <div key={index} className={`${baseClasses} border-gray-300`}>
+        <div className={`${baseClasses} border-gray-300`}>
           <div className='mb-2 flex items-center gap-2'>
             <Bolt className='h-5 w-5 text-gray-600' />
             <span className='text-sm font-medium text-gray-700'>tool</span>
           </div>
           {message.message.content.map((i) => {
-            if (i.renderer)
-              return (
-                <i.renderer
-                  agent={agent}
-                  pendingResolveData={pendingResolveData}
-                />
-              )
+            if (i.renderer) return <i.renderer />
             return (
               <pre className='overflow-auto text-sm break-words whitespace-pre-wrap text-gray-800'>
                 {JSON.stringify(i, null, 2)}
@@ -103,7 +80,7 @@ interface Result {
   active: boolean
   rejectionCount: number
 }
-// 翻译结果组件
+
 const TranslationResult = ({ result }: { result: Result[] }) => {
   const mouseEnterTargetType = useRef<'origin' | 'translate' | null>(null)
   const originRefs = useRef<Map<any, any>>(new Map())
@@ -240,7 +217,7 @@ const TranslationResult = ({ result }: { result: Result[] }) => {
 
 export default function Home() {
   const [userInput, setUserInput] = useState('')
-  const { agent, pendingResolveData, messageList, state } = useAgent()
+  const { agent, messageList, state } = useAgent()
 
   // 开发环境下暴露agent到window对象
   if (process.env.NODE_ENV === 'development') {
@@ -254,12 +231,8 @@ export default function Home() {
   const handleTranslate = () => {
     if (disabled) return
 
-    // 清空agent上下文 - 这是关键改进
-    if (agent.current.clear) {
-      agent.current.clear()
-    }
+    agent.current.clear()
 
-    // 提交用户输入
     agent.current.userSubmit({
       content: userInput,
       role: 'user',
@@ -342,14 +315,8 @@ export default function Home() {
             <div className='space-y-4'>
               <h3 className='text-lg font-semibold text-gray-800'>处理过程</h3>
               <div className='space-y-2'>
-                {messageList.map((message, index) => (
-                  <MessageItem
-                    key={index}
-                    message={message}
-                    index={index}
-                    agent={agent.current}
-                    pendingResolveData={pendingResolveData}
-                  />
+                {messageList.map((message) => (
+                  <MessageItem key={message.id} message={message} />
                 ))}
               </div>
             </div>

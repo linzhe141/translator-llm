@@ -1,13 +1,8 @@
-import type { Agent } from '@/core/agent'
 import { useEffect, useState } from 'react'
 import { Check, X } from 'lucide-react'
-export function TranslateToolMessage({
-  pendingResolveData,
-  agent,
-}: {
-  pendingResolveData: any
-  agent: Agent
-}) {
+import { useAgent } from '@/hooks/useAgent'
+export function TranslateToolMessage() {
+  const { agent, pendingResolveData } = useAgent()
   const [list, setList] = useState<
     {
       origin: string
@@ -29,11 +24,11 @@ export function TranslateToolMessage({
   }, [pendingResolveData])
 
   function onClickResolve() {
-    agent.resolveTask()
+    agent.current.resolveTask()
   }
 
   function onClickReject() {
-    agent.rejectTask()
+    agent.current.rejectTask()
   }
   return (
     <div className='space-y-2'>

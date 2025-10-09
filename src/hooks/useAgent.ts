@@ -1,7 +1,9 @@
 import { Agent } from '@/core/agent'
-import { useRef } from 'react'
+import { createRef } from 'react'
 import { useAgentStore } from '@/store/agent'
 
+// TODO 这个单例有点抽象了
+const _agent = createRef<Agent>() as React.RefObject<Agent>
 export function useAgent() {
   const state = useAgentStore((s) => s.state)
   const setState = useAgentStore((s) => s.setState)
@@ -12,13 +14,13 @@ export function useAgent() {
   const messageList = useAgentStore((s) => s.messageList)
   const setMessageList = useAgentStore((s) => s.setMessageList)
 
-  const agent = useRef(
-    new Agent({
+  if (_agent.current === null) {
+    _agent.current = new Agent({
       setPendingResolveData,
       setState,
       setMessageList,
     })
-  )
+  }
 
-  return { agent, pendingResolveData, messageList, state }
+  return { agent: _agent, pendingResolveData, messageList, state }
 }

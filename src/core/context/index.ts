@@ -84,20 +84,21 @@ export type LLMContext =
   | AssistantMessageContext
 export type ContextMessage = LLMContext /* | StreamContext */
 export class Context {
-  subscribers = new Set<any>()
   private messages: ContextMessage[] = []
-  subscribe(callback: any) {
-    this.subscribers.add(callback)
-    return () => this.subscribers.delete(callback)
+  private syncStoreDispatch: ((v: ContextMessage[]) => void) | null = null
+
+  constructor(syncStoreDispatch: ((v: ContextMessage[]) => void) | null) {
+    this.syncStoreDispatch = syncStoreDispatch
   }
+
   addMessage(message: ContextMessage) {
     this.setMessages([...this.messages, message])
   }
   setMessages(messages: ContextMessage[]) {
     this.messages = messages
-    this.subscribers.forEach((callback) => {
-      callback()
-    })
+    if (this.syncStoreDispatch) {
+      this.syncStoreDispatch(this.messages)
+    }
   }
   deleteMessage(id: string) {
     this.setMessages(this.messages.filter((m) => m.id !== id))

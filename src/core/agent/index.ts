@@ -34,7 +34,7 @@ export class Agent {
     (input: any, agent: Agent, toolCall: ToolCallPart) => any
   > = toolsExecuter
   toolsRenderer: Record<string, ComponentType<any>> = toolsRenderer
-  context: Context = new Context()
+  context: Context = null!
   workingMemory: WorkingMemory = createInitialWorkingMemory()
 
   private _resolve:
@@ -46,8 +46,8 @@ export class Agent {
     return this._state
   }
   set state(value: WorkflowState) {
-    this.options.setState(value)
     this._state = value
+    this.options.setState(value)
   }
 
   private llmHandler = new LLMHandler(this)
@@ -58,7 +58,7 @@ export class Agent {
   }
 
   clear() {
-    this.context = new Context()
+    this.context = new Context(this.options.setMessageList)
     this.workingMemory = createInitialWorkingMemory()
   }
 

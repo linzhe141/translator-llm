@@ -62,7 +62,9 @@ export class Agent {
     this.workingMemory = createInitialWorkingMemory()
   }
 
-  waitingToBeResolved(data: any): Promise<{ status: 'approved' | 'rejected' }> {
+  waitingToBeResolved(
+    data?: any
+  ): Promise<{ status: 'approved' | 'rejected' }> {
     this.options.setPendingResolveData(data)
     return new Promise<{ status: 'approved' | 'rejected' }>((resolve) => {
       this._resolve = resolve
@@ -90,18 +92,24 @@ export class Agent {
   }
 
   private async workloop() {
-    while (!this.workingMemory.isComplete) {
-      await this.streamRequestLLM()
-      if (this.state === 'error') break
+    let finishReason = ''
+    while (!whenStopLoop(finishReason)) {
+      finishReason = await this.streamRequestLLM()
+      if (this.state === 'error') {
+        return
+      }
     }
     this.state = 'workflow_complete'
   }
 
   async streamRequestLLM() {
     try {
-      await this.llmHandler.streamAndHandle(this.models.reasoning, this.tools)
+      return await this.llmHandler.streamAndHandle(
+        this.models.reasoning,
+        this.tools
+      )
     } catch (error) {
-      console.error(error)
+      console.error('streamRequestLLM-> ' + error)
       this.state = 'error'
     }
   }
@@ -109,4 +117,11 @@ export class Agent {
   async processToolCall(toolCall: ToolCallPart) {
     await this.toolExecutor.execute(toolCall)
   }
+}
+
+function whenStopLoop(data: string) {
+  if (data === 'stop' || data === 'error') {
+    return true
+  }
+  return false
 }

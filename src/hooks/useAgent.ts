@@ -14,13 +14,23 @@ export function useAgent() {
   const messageList = useAgentStore((s) => s.messageList)
   const setMessageList = useAgentStore((s) => s.setMessageList)
 
+  const toolExecuteMetaInfo = useAgentStore((s) => s.toolExecuteMetaInfo)
+  const setToolExecuteMetaInfo = useAgentStore((s) => s.setToolExecuteMetaInfo)
+
   if (_agent.current === null) {
     _agent.current = new Agent({
       setPendingResolveData,
       setState,
       setMessageList,
+      setToolExecuteMetaInfo,
     })
   }
 
-  return { agent: _agent, pendingResolveData, messageList, state }
+  return {
+    agent: _agent,
+    pendingResolveData,
+    messageList,
+    state,
+    toolExecuteMetaInfo,
+  }
 }

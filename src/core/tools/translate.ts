@@ -32,48 +32,79 @@ export const translateTool = tool({
   description,
   inputSchema,
 })
-
+type Status = 'approved' | 'rejected' | 'pending'
 export interface TranslateToolResultMeta {
-  status: 'approved' | 'rejected'
+  status: Status
   original: string
-  translated: string
-  rejectionCount?: number
+  translated: { status: Status; text: string }[]
 }
+
 export const translateExecutor = async (
   input: z.infer<typeof inputSchema>,
   agent: Agent,
-  _toolCall: ToolCallPart
+  toolCall: ToolCallPart
 ) => {
+  function syncStoreDispatch(data: any) {
+    const clone = JSON.parse(JSON.stringify(data))
+    const setToolExecuteMetaInfo = agent.options.setToolExecuteMetaInfo
+    if (setToolExecuteMetaInfo) {
+      setToolExecuteMetaInfo(clone)
+    }
+  }
+
   const meta: TranslateToolResultMeta[] = []
   let rejected: Record<string, string[]> = null!
   const response: string[] = []
-  let leading = ''
-  let coreText = ''
-  let trailing = ''
+  const splitInfo: {
+    sentence: string
+    leading: string
+    trailing: string
+  }[] = []
+
   for (const split of input.splits) {
-    rejected = {}
     const match = split.match(/^(\s*)(.*?)(\s*)$/s) // s 修饰符让 . 匹配换行
-    leading = match?.[1] ?? ''
-    coreText = match?.[2] ?? ''
-    trailing = match?.[3] ?? ''
-    const result = await auditTranslate(coreText)
+    const leading = match?.[1] ?? ''
+    const sentence = match?.[2] ?? ''
+    const trailing = match?.[3] ?? ''
+    splitInfo.push({ leading, sentence, trailing })
+  }
+  const data = {
+    toolName: toolCall.toolName,
+    toolCallId: toolCall.toolCallId,
+    data: meta,
+  }
+  for (const split of splitInfo) {
+    rejected = {}
+    meta.push({
+      status: 'pending',
+      original: split.sentence,
+      translated: [],
+    })
+    syncStoreDispatch(data)
+    const result = await auditTranslate(split)
     response.push(result)
   }
   agent.workingMemory.isComplete = true
 
-  return {
-    content: response,
-    meta,
-  }
-  async function auditTranslate(sentence: string) {
+  async function auditTranslate(split: {
+    sentence: string
+    leading: string
+    trailing: string
+  }) {
+    const { sentence, leading, trailing } = split
     const translatedCore = await translateSentence(sentence)
     let translated = leading + translatedCore + trailing
     const original = leading + sentence + trailing
-    const { status } = await agent.waitingToBeResolved({
-      sentence,
-      translated,
-      meta,
-    })
+
+    const target = meta[agent.workingMemory.currentTranslationIndex + 1]
+    const translateItem: TranslateToolResultMeta['translated'][number] = {
+      status: 'pending',
+      text: translatedCore,
+    }
+    target.translated.push(translateItem)
+    syncStoreDispatch(data)
+
+    const { status } = await agent.waitingToBeResolved()
     if (status === 'approved') {
       // mark complete
       agent.workingMemory.currentTranslationIndex++
@@ -83,25 +114,22 @@ export const translateExecutor = async (
         approved: true,
         rejectionCount: rejected[sentence]?.length || 0,
       })
-      meta.push({
-        status: 'approved',
-        original,
-        translated,
-      })
+
+      const target = meta[agent.workingMemory.currentTranslationIndex]
+      translateItem.status = 'approved'
+      target.status = 'approved'
+      syncStoreDispatch(data)
     } else {
       if (rejected[sentence]) {
-        rejected[sentence].push(translated)
+        rejected[sentence].push(translatedCore)
       } else {
-        rejected[sentence] = [translated]
+        rejected[sentence] = [translatedCore]
       }
 
-      meta.push({
-        status: 'rejected',
-        original,
-        translated,
-        rejectionCount: rejected[sentence]?.length || 0,
-      })
-      translated = await auditTranslate(sentence)
+      translateItem.status = 'rejected'
+      syncStoreDispatch(data)
+
+      translated = await auditTranslate(split)
     }
 
     return translated
@@ -122,5 +150,9 @@ Please avoid similar mistakes. `
       prompt: `translate this sentence: ${sentence}`,
     })
     return res.text
+  }
+
+  return {
+    content: response,
   }
 }

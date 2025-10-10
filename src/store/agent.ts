@@ -11,6 +11,9 @@ type AgentStore = {
 
   pendingResolveData: any
   setPendingResolveData: (v: any) => void
+
+  toolExecuteMetaInfo: any
+  setToolExecuteMetaInfo: (v: any) => void
 }
 
 export const useAgentStore = create<AgentStore>((set) => ({
@@ -22,4 +25,7 @@ export const useAgentStore = create<AgentStore>((set) => ({
 
   pendingResolveData: null,
   setPendingResolveData: (v) => set({ pendingResolveData: v }),
+
+  toolExecuteMetaInfo: null,
+  setToolExecuteMetaInfo: (v) => set({ toolExecuteMetaInfo: v }),
 }))

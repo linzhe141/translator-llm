@@ -18,7 +18,7 @@ export class LLMHandler {
   get context() {
     return this.agent.context
   }
-  async streamAndHandle(model: LanguageModel, tools: ToolSet): Promise<void> {
+  async streamAndHandle(model: LanguageModel, tools: ToolSet): Promise<any> {
     this.agent.state = 'llm_response_pending'
     const { fullStream } = streamText({
       system: systemPrompt,
@@ -29,73 +29,90 @@ export class LLMHandler {
 
     let reasoningText = ''
     let toolCallInput = ''
-
     for await (const chunk of fullStream) {
-      if (chunk.type === 'reasoning-delta') {
-        reasoningText += chunk.text
-        const last = this.context.getMessages().at(-1)
-        if (!last) {
-          console.error('internal error: no last message')
-          return
+      switch (chunk.type) {
+        case 'error': {
+          this.agent.state = 'error'
+          throw chunk.error
         }
-        if (last.type === 'user') {
-          const message: AssistantMessageContext<ReasoningAssistantContent> = {
-            id: uuid(),
-            type: 'assistant',
-            message: {
-              role: 'assistant',
-              content: {
-                type: 'reasoning',
-                text: reasoningText,
-              },
-            },
-          }
-          this.context.addMessage(message)
-        } else {
-          if (!this.context.isReasoningMessage(last)) {
-            console.error('internal error: not reasoning message')
+        case 'reasoning-delta': {
+          reasoningText += chunk.text
+          const last = this.context.getMessages().at(-1)
+          if (!last) {
+            console.error('internal error: no last message')
             return
           }
-          this.context.updateStreamReasoningMessage(last, reasoningText)
-        }
-      } else if (chunk.type === 'tool-input-start') {
-        const toolCallMessag: AssistantMessageContext<ToolCallAssistantContent> =
-          {
-            id: uuid(),
-            type: 'assistant',
-            message: {
-              role: 'assistant',
-              content: [
-                {
-                  type: 'tool-call',
-                  toolCallId: chunk.id,
-                  toolName: chunk.toolName,
-                  input: '',
+          if (last.type !== 'assistant') {
+            const message: AssistantMessageContext<ReasoningAssistantContent> =
+              {
+                id: uuid(),
+                type: 'assistant',
+                message: {
+                  role: 'assistant',
+                  content: {
+                    type: 'reasoning',
+                    text: reasoningText,
+                  },
                 },
-              ],
-            },
+              }
+            this.context.addMessage(message)
+          } else {
+            if (!this.context.isReasoningMessage(last)) {
+              console.error('internal error: not reasoning message')
+              return
+            }
+            this.context.updateStreamReasoningMessage(last, reasoningText)
           }
-        this.context.addMessage(toolCallMessag)
-      } else if (chunk.type === 'tool-input-delta') {
-        const last = this.context.getMessages().at(-1)
-        if (!last || !this.context.isToolCallMessage(last)) {
-          console.error('internal error: not tool call message')
-          return
+          break
         }
-        toolCallInput += chunk.delta
-        this.context.updateStreamToolCallMessage(last, toolCallInput)
-      } else if (chunk.type === 'tool-call') {
-        const toolCallMessag: AssistantMessageContext<ToolCallAssistantContent> =
-          {
-            id: uuid(),
-            type: 'assistant',
-            message: {
-              role: 'assistant',
-              content: [chunk],
-            },
+        case 'tool-input-start': {
+          const toolCallMessag: AssistantMessageContext<ToolCallAssistantContent> =
+            {
+              id: uuid(),
+              type: 'assistant',
+              message: {
+                role: 'assistant',
+                content: [
+                  {
+                    type: 'tool-call',
+                    toolCallId: chunk.id,
+                    toolName: chunk.toolName,
+                    input: '',
+                  },
+                ],
+              },
+            }
+          this.context.addMessage(toolCallMessag)
+          break
+        }
+        case 'tool-input-delta': {
+          const last = this.context.getMessages().at(-1)
+          if (!last || !this.context.isToolCallMessage(last)) {
+            console.error('internal error: not tool call message')
+            return
           }
-        this.context.updateLastMessage(toolCallMessag)
-        await this.agent.processToolCall(chunk)
+          toolCallInput += chunk.delta
+          this.context.updateStreamToolCallMessage(last, toolCallInput)
+          break
+        }
+        case 'tool-call': {
+          const toolCallMessag: AssistantMessageContext<ToolCallAssistantContent> =
+            {
+              id: uuid(),
+              type: 'assistant',
+              message: {
+                role: 'assistant',
+                content: [chunk],
+              },
+            }
+          this.context.updateLastMessage(toolCallMessag)
+          await this.agent.processToolCall(chunk)
+          break
+        }
+        case 'finish-step': {
+          console.log(chunk)
+          return chunk.finishReason
+        }
       }
     }
   }

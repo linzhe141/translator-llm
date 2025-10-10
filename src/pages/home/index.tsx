@@ -26,7 +26,7 @@ const MessageItem = ({ message }: { message: ContextMessage }) => {
         <div className={`${baseClasses} border-blue-200 bg-blue-50`}>
           <div className='mb-2 flex items-center gap-2'>
             <UserRound className='h-5 w-5 text-blue-600' />
-            <span className='text-sm font-medium text-blue-700'>Input</span>
+            <span className='text-sm font-medium text-blue-700'>user</span>
           </div>
           <pre className='overflow-auto break-words whitespace-pre-wrap text-gray-800'>
             {message.message.content}
@@ -226,7 +226,8 @@ export default function Home() {
   }
 
   const disabled = userInput.trim().length === 0
-  const isProcessing = state !== 'workflow_complete' && state !== 'idle'
+  const isProcessing =
+    state !== 'workflow_complete' && state !== 'idle' && state !== 'error'
 
   const handleTranslate = () => {
     if (disabled) return
@@ -329,13 +330,19 @@ export default function Home() {
       {/* 状态指示器 */}
       {state && state !== 'idle' && (
         <div className='mx-4 mb-4 flex items-center gap-2 rounded-lg bg-blue-50 px-4 py-2 shadow-sm'>
-          <Info className='h-4 w-4 text-blue-600' />
-          <span className='text-sm text-blue-700'>
+          <Info
+            className={`h-4 w-4 ${state !== 'error' ? 'text-blue-600' : 'text-red-400'}`}
+          />
+          <span
+            className={`text-sm ${state !== 'error' ? 'text-blue-700' : 'text-red-500'}`}
+          >
             当前状态：
             <span className='ml-1 font-medium'>{state}</span>
           </span>
           {state.includes('ing') && (
-            <Loader2 className='ml-2 h-4 w-4 animate-spin text-blue-500' />
+            <Loader2
+              className={`ml-2 h-4 w-4 animate-spin ${state !== 'error' ? 'text-blue-500' : 'text-red-300'}`}
+            />
           )}
         </div>
       )}

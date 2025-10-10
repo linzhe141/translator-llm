@@ -45,7 +45,7 @@ export class ToolExecutor {
     taskResult = await executer(toolCall.input, this.agent, toolCall)
     contextMsg.status = 'approved'
     contextMsg.message.content[0].output.value = taskResult
-    this.context.updateLastMessage(contextMsg)
+    this.context.updateLastMessage(Object.assign({}, contextMsg))
     this.agent.state = 'tool_result'
   }
 }

@@ -12,6 +12,7 @@ import { NavLink } from 'react-router'
 import { useAgent } from '@/hooks/useAgent'
 import type { ContextMessage } from '@/core/context'
 import Markdown from 'react-markdown'
+import logo from '../../../logo.png'
 
 const isElementInContainer = (element: HTMLElement, container: HTMLElement) => {
   const elementRect = element.getBoundingClientRect()
@@ -298,7 +299,7 @@ export default function Home() {
           <div className='mb-6 space-y-4'>
             <div>
               <div className='flex flex-col items-center justify-center'>
-                <img src='../../../logo.png' height={'200px'} width={'200px'} />
+                <img src={logo} height={'200px'} width={'200px'} />
                 <label className='mb-8 block text-4xl font-bold text-gray-700'>
                   AI Translator Agent
                 </label>

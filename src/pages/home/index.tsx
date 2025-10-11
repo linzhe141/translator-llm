@@ -3,6 +3,7 @@ import { Bolt, Bot, MoveRight, UserRound, Loader2, Info } from 'lucide-react'
 import { NavLink } from 'react-router'
 import { useAgent } from '@/hooks/useAgent'
 import type { ContextMessage } from '@/core/context'
+import Markdown from 'react-markdown'
 
 const isElementInContainer = (element: HTMLElement, container: HTMLElement) => {
   const elementRect = element.getBoundingClientRect()
@@ -49,19 +50,23 @@ const MessageItem = ({ message }: { message: ContextMessage }) => {
         type = 'reasoning'
       } else {
         content = message.message
-        type = 'tool call'
+        type = 'toolCall'
       }
       return (
         <div className={`${baseClasses} border-green-200 bg-green-50`}>
           <div className='mb-2 flex items-center gap-2'>
             <Bot className='h-5 w-5 text-green-600' />
             <span className='text-sm font-medium text-green-700'>
-              assistant {type !== '' && type}
+              assistant{type !== '' && ': ' + type}
             </span>
           </div>
-          <pre className='overflow-auto break-words whitespace-pre-wrap text-gray-800'>
-            {JSON.stringify(content, null, 2)}
-          </pre>
+          {type === 'toolCall' ? (
+            <pre className='overflow-auto break-words whitespace-pre-wrap text-gray-800'>
+              {JSON.stringify(content, null, 2)}
+            </pre>
+          ) : (
+            <Markdown>{content}</Markdown>
+          )}
         </div>
       )
 

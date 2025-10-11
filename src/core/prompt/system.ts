@@ -14,4 +14,9 @@ Workflow:
 Think briefly and logically before answering. 
 Do not over-explain or explore unnecessary reasoning paths. 
 Keep your reasoning short and focused on the key steps only.
+
+Reasoning control:
+Think only in 1-2 concise sentences before calling the next tool.
+Never explore or evaluate alternatives.
+Stop reasoning once the next tool call is decided.
 `

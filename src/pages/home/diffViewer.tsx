@@ -23,6 +23,60 @@ export function DiffViewer(props: Props) {
 
     return { added, removed, unchanged, total: added + removed + unchanged }
   }
-  getStatus()
-  return <div>diff</div>
+
+  const status = getStatus()
+
+  return (
+    <div className='space-y-3'>
+      {/* 统计信息 */}
+      <div className='flex items-center gap-4 text-xs'>
+        <div className='flex items-center gap-1.5'>
+          <span className='inline-block h-2 w-2 rounded-full bg-emerald-500'></span>
+          <span className='text-gray-600'>添加: {status.added}</span>
+        </div>
+        <div className='flex items-center gap-1.5'>
+          <span className='inline-block h-2 w-2 rounded-full bg-red-500'></span>
+          <span className='text-gray-600'>删除: {status.removed}</span>
+        </div>
+        <div className='flex items-center gap-1.5'>
+          <span className='inline-block h-2 w-2 rounded-full bg-gray-400'></span>
+          <span className='text-gray-600'>未变: {status.unchanged}</span>
+        </div>
+      </div>
+
+      {/* Diff 内容 */}
+      <div className='rounded-lg border border-gray-200 bg-gray-50 p-4'>
+        <div className='font-mono text-sm leading-relaxed'>
+          {diff.map((part, index) => {
+            if (part.added) {
+              return (
+                <span
+                  key={index}
+                  className='rounded bg-emerald-100 px-1 text-emerald-800'
+                  style={{ textDecoration: 'none' }}
+                >
+                  {part.value}
+                </span>
+              )
+            } else if (part.removed) {
+              return (
+                <span
+                  key={index}
+                  className='rounded bg-red-100 px-1 text-red-800 line-through'
+                >
+                  {part.value}
+                </span>
+              )
+            } else {
+              return (
+                <span key={index} className='text-gray-700'>
+                  {part.value}
+                </span>
+              )
+            }
+          })}
+        </div>
+      </div>
+    </div>
+  )
 }

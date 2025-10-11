@@ -1,24 +1,23 @@
 import { tool, generateText, type ToolCallPart } from 'ai'
 import { z } from 'zod'
 import type { Agent } from '../agent'
+import { translateToolUIPlaceholder } from '@/common'
 
 const description = `
 You are a translation tool named "translate".  
 Your ONLY task: **translate non-code text from any language into English**.  
 
-Rules (MUST FOLLOW STRICTLY):  
-1. **Do NOT summarize, interpret, or expand.** Translation only.  
-2. **Preserve ALL formatting exactly** — including:
+Description:  
+1. **Preserve ALL formatting exactly** — including:
    - Line breaks  
    - Empty lines  
    - Spaces and indentation  
    - Markdown or HTML structure  
    - Lists, tables, emojis, punctuation, and symbols  
-3. **Do NOT translate code snippets** (inline code, fenced code blocks, programming syntax).  
+2. **Do NOT translate code snippets** (inline code, fenced code blocks, programming syntax).  
    - Keep code exactly as it appears.  
    - Only translate surrounding comments, text, or documentation.  
-4. **Do NOT change the order of text segments.**  
-5. Output **only the translated text**, no commentary, no explanation.  
+3. **Do NOT change the order of text segments.**  
 `
 
 const inputSchema = z.object({
@@ -78,7 +77,13 @@ export const translateExecutor = async (
     meta.push({
       status: 'pending',
       original: split.sentence,
-      translated: [],
+      translated: [
+        // only a placeholder for ui
+        {
+          status: 'pending',
+          text: translateToolUIPlaceholder,
+        },
+      ],
     })
     syncStoreDispatch(data)
     const result = await auditTranslate(split)
@@ -97,11 +102,8 @@ export const translateExecutor = async (
     const original = leading + sentence + trailing
 
     const target = meta[agent.workingMemory.currentTranslationIndex + 1]
-    const translateItem: TranslateToolResultMeta['translated'][number] = {
-      status: 'pending',
-      text: translatedCore,
-    }
-    target.translated.push(translateItem)
+    const translateItem = target.translated[target.translated.length - 1]
+    translateItem.text = translatedCore
     syncStoreDispatch(data)
 
     const { status } = await agent.waitingToBeResolved()
@@ -127,6 +129,11 @@ export const translateExecutor = async (
       }
 
       translateItem.status = 'rejected'
+      // only a placeholder for ui
+      target.translated.push({
+        status: 'pending',
+        text: translateToolUIPlaceholder,
+      })
       syncStoreDispatch(data)
 
       translated = await auditTranslate(split)
@@ -135,18 +142,27 @@ export const translateExecutor = async (
     return translated
   }
   async function translateSentence(sentence: string) {
-    const res = await generateText({
-      model: agent.models.tool,
-      system: `${description}
+    const system = `${description}
     ${
       Object.keys(rejected).length > 0
         ? `
 ### This is <original-sentence>${sentence}</original-sentence> that had translation issues:
 The following sentences were previously rejected by human reviewers
-${rejected[sentence].map((i) => `- <rejected-translated>${i}</rejected-translated>`).join('\n')}
-Please avoid similar mistakes. `
+They were rejected for stylistic or wording reasons — not for accuracy.
+You must produce a **different English rendering** that preserves meaning
+but **uses different vocabulary or phrasing** from the rejected ones.
+
+${rejected[sentence]
+  .slice(0, 1)
+  .map((i) => `- <rejected-translated>${i}</rejected-translated>`)
+  .join('\n')}
+`
         : ''
-    }`,
+    }`
+    const res = await generateText({
+      model: agent.models.tool,
+      temperature: 1,
+      system,
       prompt: `translate this sentence: ${sentence}`,
     })
     return res.text

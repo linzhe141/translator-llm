@@ -1,4 +1,3 @@
-
 # AI Translator Agent
 
 A powerful translation application powered by Large Language Model (LLM) agents, featuring context understanding, multi-turn dialogue, and intelligent decision-making capabilities.
@@ -31,12 +30,14 @@ flowchart LR
 
 **Split Tool**  
 Intelligently segments text into natural language units while:
+
 - Preserving all formatting (whitespace, line breaks, punctuation)
 - Detecting sentence and paragraph boundaries
 - Maintaining original character order
 
 **Translate Tool**  
 Translates text segments with:
+
 - Context preservation
 - Code block protection (no translation of code)
 - Formatting retention

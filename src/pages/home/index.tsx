@@ -1,5 +1,13 @@
 import { useRef, useState } from 'react'
-import { Bolt, Bot, MoveRight, UserRound, Loader2, Info } from 'lucide-react'
+import {
+  Bolt,
+  Bot,
+  MoveRight,
+  UserRound,
+  Loader2,
+  Info,
+  Github,
+} from 'lucide-react'
 import { NavLink } from 'react-router'
 import { useAgent } from '@/hooks/useAgent'
 import type { ContextMessage } from '@/core/context'
@@ -270,7 +278,7 @@ export default function Home() {
       <div className='h-0 flex-1 overflow-auto py-6'>
         <div className='mx-auto max-w-6xl'>
           {/* 顶部导航 */}
-          <div className='mb-6'>
+          <div className='mb-6 flex justify-between'>
             <NavLink
               to='/settings'
               className='inline-flex items-center gap-2 rounded-full bg-blue-50 px-4 py-2 text-blue-600 transition-colors hover:bg-blue-100'
@@ -278,14 +286,23 @@ export default function Home() {
               <MoveRight className='h-4 w-4' />
               <span className='text-sm font-medium'>settings</span>
             </NavLink>
+            <NavLink
+              to='https://github.com/linzhe141/translator-llm'
+              target='_blank'
+            >
+              <Github className='h-4 w-4' />
+            </NavLink>
           </div>
 
           {/* 输入区域 */}
           <div className='mb-6 space-y-4'>
             <div>
-              <label className='mb-4 block text-4xl font-bold text-gray-700'>
-                AI Translator Agent
-              </label>
+              <div className='flex flex-col items-center justify-center'>
+                <img src='/logo.png' width={'200px'} />
+                <label className='mb-8 block text-4xl font-bold text-gray-700'>
+                  AI Translator Agent
+                </label>
+              </div>
               <p className='mb-3 text-sm text-gray-600'>
                 基于大语言模型的Agent架构，具备上下文理解、多轮对话和智能决策能力。
                 支持复杂文本的语境分析和专业术语处理，提供更准确、自然的翻译结果。

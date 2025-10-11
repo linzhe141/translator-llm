@@ -35,18 +35,32 @@ const MessageItem = ({ message }: { message: ContextMessage }) => {
       )
 
     case 'assistant':
+      let content: any = null
+      let type = ''
+      if (typeof message.message === 'string') {
+        // assistant text
+        content = message.message
+      } else if (
+        !Array.isArray(message.message.content) &&
+        typeof message.message.content === 'object' &&
+        message.message.content.type === 'reasoning'
+      ) {
+        content = message.message.content.text
+        type = 'reasoning'
+      } else {
+        content = message.message
+        type = 'tool call'
+      }
       return (
         <div className={`${baseClasses} border-green-200 bg-green-50`}>
           <div className='mb-2 flex items-center gap-2'>
             <Bot className='h-5 w-5 text-green-600' />
             <span className='text-sm font-medium text-green-700'>
-              assistant
+              assistant {type !== '' && type}
             </span>
           </div>
           <pre className='overflow-auto break-words whitespace-pre-wrap text-gray-800'>
-            {typeof message.message === 'string'
-              ? message.message
-              : JSON.stringify(message.message, null, 2)}
+            {JSON.stringify(content, null, 2)}
           </pre>
         </div>
       )
@@ -297,6 +311,18 @@ export default function Home() {
             </button>
           </div>
 
+          {/* 消息历史 */}
+          {messageList.length > 0 && (
+            <div className='space-y-4'>
+              <h3 className='text-lg font-semibold text-gray-800'>处理过程</h3>
+              <div className='space-y-2'>
+                {messageList.map((message) => (
+                  <MessageItem key={message.id} message={message} />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* 翻译完成后显示结果 */}
           {state === 'workflow_complete' && (
             <TranslationResult
@@ -309,18 +335,6 @@ export default function Home() {
                 })
               )}
             />
-          )}
-
-          {/* 消息历史 */}
-          {messageList.length > 0 && state !== 'workflow_complete' && (
-            <div className='space-y-4'>
-              <h3 className='text-lg font-semibold text-gray-800'>处理过程</h3>
-              <div className='space-y-2'>
-                {messageList.map((message) => (
-                  <MessageItem key={message.id} message={message} />
-                ))}
-              </div>
-            </div>
           )}
         </div>
 

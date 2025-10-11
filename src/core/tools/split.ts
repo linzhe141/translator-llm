@@ -5,17 +5,9 @@ import type { Agent } from '../agent'
 const description = `
 This tool (name: 'split') splits a text into natural-language segments using regular expressions.
 
-Rules:
-- Do not rewrite, normalize, or remove any characters from the text.
-- Detect segment boundaries at the end of a sentence or paragraph.
-- Return an array of integers representing the **end index (exclusive)** of each segment.
-- Indices must exactly correspond to positions in the original text (count every character, including spaces, tabs, line breaks, punctuation).
-- Keep the same order as they appear in the original text.
-- No classification or rewriting — just boundary indices.
-
 Example:
 Input: "This is a test. This is another test."
-Output: {result: ["This is a test. ", "This is another test."]}
+Output: {splits: ["This is a test. ", "This is another test."]}
 `
 
 const inputSchema = z.object({
@@ -60,8 +52,8 @@ export const splitExecutor = async (
   _toolCall: ToolCallPart
 ) => {
   const indices = getBoundaryIndices(input.text)
-  console.log('split indices', indices)
   const segments = splitByIndices(input.text, indices)
+  console.log('split segments', segments)
   agent.workingMemory.splitTexts = segments
-  return segments
+  return { splits: segments }
 }

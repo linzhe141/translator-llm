@@ -153,7 +153,7 @@ You must produce a **different English rendering** that preserves meaning
 but **uses different vocabulary or phrasing** from the rejected ones.
 
 ${rejected[sentence]
-  .slice(0, 1)
+  .slice(-3)
   .map((i) => `- <rejected-translated>${i}</rejected-translated>`)
   .join('\n')}
 `
@@ -161,7 +161,6 @@ ${rejected[sentence]
     }`
     const res = await generateText({
       model: agent.models.tool,
-      temperature: 1,
       system,
       prompt: `translate this sentence: ${sentence}`,
     })

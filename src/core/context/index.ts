@@ -188,6 +188,29 @@ export class Context {
     }
   }
 
+  isTextMessage(message: ContextMessage): boolean {
+    if (
+      message.type === 'assistant' &&
+      message.message.role === 'assistant' &&
+      !Array.isArray(message.message.content) &&
+      typeof message.message.content === 'string'
+    ) {
+      return true
+    }
+    return false
+  }
+  updateStreamTextMessage(textMessage: ContextMessage, content: string) {
+    if (!this.isTextMessage(textMessage)) {
+      throw new Error('a internal error has occured')
+    } else {
+      // 是否有react 引用问题？
+      const ctxMessage =
+        textMessage as AssistantMessageContext<TextAssistantContent>
+      ctxMessage.message.content = content
+      this.setMessages(this.getMessages().slice())
+    }
+  }
+
   isToolCallMessage(message: ContextMessage): boolean {
     if (
       message.type === 'assistant' &&

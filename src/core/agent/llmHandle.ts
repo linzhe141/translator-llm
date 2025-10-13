@@ -3,6 +3,7 @@ import { type Agent } from '.'
 import type {
   AssistantMessageContext,
   ReasoningAssistantContent,
+  TextAssistantContent,
   ToolCallAssistantContent,
 } from '../context'
 import { v4 as uuid } from 'uuid'
@@ -28,6 +29,7 @@ export class LLMHandler {
     })
 
     let reasoningText = ''
+    let text = ''
     let toolCallInput = ''
     for await (const chunk of fullStream) {
       switch (chunk.type) {
@@ -62,6 +64,35 @@ export class LLMHandler {
               return
             }
             this.context.updateStreamReasoningMessage(last, reasoningText)
+          }
+          break
+        }
+        case 'text-delta': {
+          text += chunk.text
+          const last = this.context.getMessages().at(-1)
+          if (!last) {
+            console.error('internal error: no last message')
+            return
+          }
+          if (
+            last.type !== 'assistant' ||
+            this.context.isReasoningMessage(last)
+          ) {
+            const message: AssistantMessageContext<TextAssistantContent> = {
+              id: uuid(),
+              type: 'assistant',
+              message: {
+                role: 'assistant',
+                content: text,
+              },
+            }
+            this.context.addMessage(message)
+          } else {
+            if (!this.context.isTextMessage(last)) {
+              console.error('internal error: not reasoning message')
+              return
+            }
+            this.context.updateStreamTextMessage(last, text)
           }
           break
         }

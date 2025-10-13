@@ -47,9 +47,9 @@ const MessageItem = ({ message }: { message: ContextMessage }) => {
     case 'assistant':
       let content: any = null
       let type = ''
-      if (typeof message.message === 'string') {
+      if (typeof message.message.content === 'string') {
         // assistant text
-        content = message.message
+        content = message.message.content
       } else if (
         !Array.isArray(message.message.content) &&
         typeof message.message.content === 'object' &&

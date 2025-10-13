@@ -1,5 +1,5 @@
 import { Agent } from '@/core/agent'
-import { createRef } from 'react'
+import { createRef, useEffect } from 'react'
 import { useAgentStore } from '@/store/agent'
 
 // TODO 这个单例有点抽象了
@@ -26,6 +26,19 @@ export function useAgent() {
     })
   }
 
+  useEffect(() => {
+    let timer = null
+    if (state === 'workflow_complete') {
+      timer = setTimeout(() => {
+        setState('idle')
+      }, 2000)
+    }
+    return () => {
+      if (timer) {
+        clearTimeout(timer)
+      }
+    }
+  }, [state, setState])
   return {
     agent: _agent,
     pendingResolveData,

@@ -142,27 +142,30 @@ export const translateExecutor = async (
     return translated
   }
   async function translateSentence(sentence: string) {
-    const system = `${description}
-    ${
-      Object.keys(rejected).length > 0
-        ? `
-### This is <original-sentence>${sentence}</original-sentence> that had translation issues:
-The following sentences were previously rejected by human reviewers
-They were rejected for stylistic or wording reasons — not for accuracy.
-You must produce a **different English rendering** that preserves meaning
-but **uses different vocabulary or phrasing** from the rejected ones.
+    const system = `${description}`
+    const res = await generateText({
+      model: agent.models.tool,
+      system,
+      prompt: `
+        ${
+          Object.keys(rejected).length > 0
+            ? `
+# This is <original-sentence>${sentence}</original-sentence> that had translation issues:
 
 ${rejected[sentence]
   .slice(-3)
   .map((i) => `- <rejected-translated>${i}</rejected-translated>`)
   .join('\n')}
+The following sentences were previously rejected by human reviewers
+They were rejected for stylistic or wording reasons — not for accuracy.
+You must produce a **different rendering** that preserves meaning
+but **uses different vocabulary or phrasing** from the rejected ones.
+
+# Translate this original sentence again: ${sentence}, do not use any tags to wrap the translated content 
 `
-        : ''
-    }`
-    const res = await generateText({
-      model: agent.models.tool,
-      system,
-      prompt: `translate this sentence: ${sentence}`,
+            : `translate this original sentence : ${sentence}, do not use any tags to wrap the translated content `
+        }
+      `,
     })
     return res.text
   }

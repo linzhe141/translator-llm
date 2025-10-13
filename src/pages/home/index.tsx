@@ -347,18 +347,19 @@ export default function Home() {
           )}
 
           {/* 翻译完成后显示结果 */}
-          {state === 'workflow_complete' && (
-            <TranslationResult
-              result={agent.current.workingMemory.translationResults.map(
-                (i) => ({
-                  origin: i.original,
-                  translate: i.translated,
-                  active: false,
-                  rejectionCount: i.rejectionCount,
-                })
-              )}
-            />
-          )}
+          {state === 'workflow_complete' &&
+            agent.current.workingMemory.translationResults.length > 0 && (
+              <TranslationResult
+                result={agent.current.workingMemory.translationResults.map(
+                  (i) => ({
+                    origin: i.original,
+                    translate: i.translated,
+                    active: false,
+                    rejectionCount: i.rejectionCount,
+                  })
+                )}
+              />
+            )}
         </div>
 
         <div className='h-[200px]'></div>

@@ -17,7 +17,7 @@ export function useAgent() {
   const toolExecuteMetaInfo = useAgentStore((s) => s.toolExecuteMetaInfo)
   const setToolExecuteMetaInfo = useAgentStore((s) => s.setToolExecuteMetaInfo)
 
-  if (_agent.current === null) {
+  function initAgent() {
     _agent.current = new Agent({
       setPendingResolveData,
       setState,
@@ -25,6 +25,10 @@ export function useAgent() {
       setToolExecuteMetaInfo,
     })
   }
+  if (_agent.current === null) {
+    initAgent()
+  }
+
   // TODO
   // useEffect(() => {
   //   let timer = null
@@ -45,5 +49,6 @@ export function useAgent() {
     messageList,
     state,
     toolExecuteMetaInfo,
+    initAgent,
   }
 }

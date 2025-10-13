@@ -1,3 +1,4 @@
+import { useAgent } from '@/hooks/useAgent'
 import { useSettingsStore } from '@/store/settings'
 import { Check, Loader, MoveLeft, Zap } from 'lucide-react'
 import { useState } from 'react'
@@ -11,6 +12,7 @@ interface FormData {
   toolModelID: string
 }
 export default function Setting() {
+  const { initAgent } = useAgent()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState(false)
   const [formErrors, setFormErrors] = useState<FormData>({
@@ -84,6 +86,7 @@ export default function Setting() {
 
     try {
       setLLMApi(formData)
+      initAgent()
       toast.success('LLM client settings updated successfully!')
     } catch (e) {
       console.error('Error setting LLM client:', e)

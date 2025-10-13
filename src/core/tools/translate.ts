@@ -70,6 +70,7 @@ export const translateExecutor = async (
   const data = {
     toolName: toolCall.toolName,
     toolCallId: toolCall.toolCallId,
+    splits: splitInfo,
     data: meta,
   }
   for (const split of splitInfo) {

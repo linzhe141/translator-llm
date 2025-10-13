@@ -3,16 +3,26 @@ import { useAgent } from '@/hooks/useAgent'
 import type { TranslateToolResultMeta } from '@/core/tools/translate'
 import { DiffViewer } from '../diffViewer'
 import { translateToolUIPlaceholder } from '@/common'
+import { useState } from 'react'
 
 export function TranslateToolMessage() {
   const { agent, toolExecuteMetaInfo } = useAgent()
-  const { data: list } = toolExecuteMetaInfo as {
+  const toolMeta = toolExecuteMetaInfo as {
     toolName: string
     toolCallId: string
+    splits: {
+      sentence: string
+      leading: string
+      trailing: string
+    }[]
     data: TranslateToolResultMeta[]
   }
-
+  const { splits, data: list } = toolMeta
+  const [currentIndex, setCurrentIndex] = useState(0)
   function onClickResolve() {
+    if (currentIndex < splits.length - 1) {
+      setCurrentIndex(currentIndex + 1)
+    }
     agent.current.resolveTask()
   }
 
@@ -100,6 +110,26 @@ export function TranslateToolMessage() {
           </div>
         </div>
       ))}
+
+      <div className='flex justify-center'>
+        <div className='inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-2.5 shadow-lg ring-4 ring-indigo-50'>
+          <div className='flex items-center gap-2'>
+            <div className='flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm'>
+              <span className='text-sm font-bold text-white'>
+                {currentIndex + 1}
+              </span>
+            </div>
+            <span className='text-sm font-medium text-white/90'>/</span>
+            <div className='flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm'>
+              <span className='text-sm font-bold text-white'>
+                {splits.length}
+              </span>
+            </div>
+          </div>
+          <div className='h-4 w-px bg-white/30'></div>
+          <span className='text-xs font-medium text-white/90'>翻译进度</span>
+        </div>
+      </div>
     </div>
   )
 }

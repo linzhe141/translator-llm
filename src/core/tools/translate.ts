@@ -3,9 +3,9 @@ import { z } from 'zod'
 import type { Agent } from '../agent'
 import { translateToolUIPlaceholder } from '@/common'
 
-const description = `
+const getDescription = (targetLanguage: string) => `
 You are a translation tool named "translate".  
-Your ONLY task: **translate non-code text from any language into English**.  
+Your ONLY task: **translate non-code text from any language into ${targetLanguage}**.  
 
 Description:  
 1. **Preserve ALL formatting exactly** — including:
@@ -21,6 +21,10 @@ Description:
 `
 
 const inputSchema = z.object({
+  targetLanguage: z
+    .string()
+    .describe('The target language to be translated')
+    .default('english'),
   splits: z.array(
     z.string().describe('The PARTIAL source string to translate')
   ),
@@ -28,7 +32,7 @@ const inputSchema = z.object({
 
 export const translateTool = tool({
   name: 'translate',
-  description,
+  description: getDescription('target language'),
   inputSchema,
 })
 type Status = 'approved' | 'rejected' | 'pending'
@@ -59,7 +63,7 @@ export const translateExecutor = async (
     leading: string
     trailing: string
   }[] = []
-
+  const targetLanguage = input.targetLanguage
   for (const split of input.splits) {
     const match = split.match(/^(\s*)(.*?)(\s*)$/s) // s 修饰符让 . 匹配换行
     const leading = match?.[1] ?? ''
@@ -143,7 +147,7 @@ export const translateExecutor = async (
     return translated
   }
   async function translateSentence(sentence: string) {
-    const system = `${description}`
+    const system = getDescription(targetLanguage)
     const res = await generateText({
       model: agent.models.tool,
       system,
@@ -162,9 +166,9 @@ They were rejected for stylistic or wording reasons — not for accuracy.
 You must produce a **different rendering** that preserves meaning
 but **uses different vocabulary or phrasing** from the rejected ones.
 
-# Translate this original sentence again: ${sentence}, do not use any tags to wrap the translated content 
+# Translate this original sentence to ${targetLanguage} again: ${sentence}, do not use any tags to wrap the translated content 
 `
-            : `translate this original sentence : ${sentence}, do not use any tags to wrap the translated content `
+            : `translate this original sentence to ${targetLanguage} : ${sentence}, do not use any tags to wrap the translated content `
         }
       `,
     })

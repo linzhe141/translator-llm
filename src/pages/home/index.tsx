@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Bolt,
   Bot,
@@ -255,7 +255,10 @@ export default function Home() {
 
   const disabled = userInput.trim().length === 0
   const isProcessing =
-    state !== 'workflow_complete' && state !== 'idle' && state !== 'error'
+    state !== 'workflow_complete' &&
+    state !== 'idle' &&
+    state !== 'error' &&
+    state !== 'abort'
 
   const handleTranslate = () => {
     if (disabled) return
@@ -274,9 +277,18 @@ export default function Home() {
     }
   }
 
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // 自动滚动到底
+  useEffect(() => {
+    if ((isProcessing || state === 'workflow_complete') && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [messageList, isProcessing, state])
+
   return (
     <div className='flex h-screen flex-col'>
-      <div className='h-0 flex-1 overflow-auto py-6'>
+      <div className='h-0 flex-1 overflow-auto py-6' ref={scrollRef}>
         <div className='mx-auto max-w-6xl'>
           {/* 顶部导航 */}
           <div className='mb-6 flex justify-between'>
@@ -366,8 +378,8 @@ export default function Home() {
       </div>
 
       {/* 状态指示器 */}
-      {state && state !== 'idle' && (
-        <div className='mx-4 mb-4 flex items-center gap-2 rounded-lg bg-blue-50 px-4 py-2 shadow-sm'>
+      {state !== 'idle' && (
+        <div className='mx-4 mb-4 flex items-center gap-3 rounded-lg bg-blue-50 px-4 py-2 shadow-sm'>
           <Info
             className={`h-4 w-4 ${state !== 'error' ? 'text-blue-600' : 'text-red-400'}`}
           />
@@ -377,10 +389,14 @@ export default function Home() {
             当前状态：
             <span className='ml-1 font-medium'>{state}</span>
           </span>
-          {state.includes('ing') && (
-            <Loader2
-              className={`ml-2 h-4 w-4 animate-spin ${state !== 'error' ? 'text-blue-500' : 'text-red-300'}`}
-            />
+          {isProcessing && (
+            <button
+              className='ml-2 flex items-center gap-1 rounded-md border border-red-200 bg-red-100 px-3 py-1 text-sm font-medium text-red-600 shadow transition-colors hover:bg-red-200 active:bg-red-300'
+              onClick={() => agent.current.cancel()}
+            >
+              <Loader2 className='mr-1 h-4 w-4 animate-spin' />
+              abort
+            </button>
           )}
         </div>
       )}

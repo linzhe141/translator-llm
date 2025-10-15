@@ -171,6 +171,7 @@ but **uses different vocabulary or phrasing** from the rejected ones.
             : `translate this original sentence to ${targetLanguage} : ${sentence}, do not use any tags to wrap the translated content `
         }
       `,
+      abortSignal: agent.abortController!.signal,
     })
     return res.text
   }

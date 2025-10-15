@@ -23,6 +23,7 @@ export type WorkflowState =
   | 'tool_audit_rejected'
   | 'workflow_complete'
   | 'error'
+  | 'abort'
 
 export class Agent {
   options: any = {}
@@ -36,6 +37,7 @@ export class Agent {
   toolsRenderer: Record<string, ComponentType<any>> = toolsRenderer
   context: Context = null!
   workingMemory: WorkingMemory = createInitialWorkingMemory()
+  abortController: AbortController | null = null
 
   private _resolve:
     | ((value: { status: 'approved' | 'rejected' }) => void)
@@ -55,6 +57,10 @@ export class Agent {
 
   constructor(options: any) {
     this.options = options
+  }
+
+  cancel() {
+    if (this.abortController) this.abortController.abort()
   }
 
   clear() {
@@ -92,10 +98,14 @@ export class Agent {
   }
 
   private async workloop() {
+    this.abortController = new AbortController()
     let finishReason = ''
     while (!whenStopLoop(finishReason)) {
       finishReason = await this.streamRequestLLM()
       if (this.state === 'error') {
+        return
+      }
+      if (this.state === 'abort') {
         return
       }
     }

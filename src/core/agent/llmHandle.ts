@@ -25,6 +25,10 @@ export class LLMHandler {
       system: systemPrompt,
       model,
       tools,
+      abortSignal: this.agent.abortController!.signal,
+      onAbort(e) {
+        console.log('onAbort', e)
+      },
       messages: this.context.toModelMessages(),
     })
 
@@ -36,6 +40,10 @@ export class LLMHandler {
         case 'error': {
           this.agent.state = 'error'
           throw chunk.error
+        }
+        case 'abort': {
+          this.agent.state = 'abort'
+          break
         }
         case 'reasoning-delta': {
           reasoningText += chunk.text

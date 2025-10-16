@@ -116,38 +116,7 @@ const TranslationResult = ({ result }: { result: Result[] }) => {
   const originContainerRef = useRef<any>(null)
   const translateContainerRef = useRef<any>(null)
   const [textSegments, setTextSegments] = useState(result)
-  const handleScroll = (type: 'origin' | 'translate') => {
-    if (mouseEnterTargetType.current === 'origin' && type === 'translate')
-      return
-    if (mouseEnterTargetType.current === 'translate' && type === 'origin')
-      return
-    console.log(type)
 
-    const container = originContainerRef.current
-    const translateContainer = translateContainerRef.current
-    if (!container || !translateContainer) return
-
-    const refs = type === 'origin' ? originRefs : translateRefs
-    const targetRefs = type === 'origin' ? translateRefs : originRefs
-    // 找到第一个完全在视窗中的 span
-    for (const item of textSegments) {
-      const el = refs.current.get(item)
-      if (!el) continue
-      const rect = el.getBoundingClientRect()
-      const containerRect = container.getBoundingClientRect()
-      if (
-        rect.top >= containerRect.top + 100 &&
-        rect.bottom <= containerRect.bottom - 100
-      ) {
-        // 滚动对应的翻译
-        const targetEl = targetRefs.current.get(item)
-        if (targetEl) {
-          targetEl.scrollIntoView({ behavior: 'auto', block: 'nearest' })
-        }
-        break
-      }
-    }
-  }
   function alignSourceMap(
     data: {
       origin: string
@@ -192,9 +161,6 @@ const TranslationResult = ({ result }: { result: Result[] }) => {
             <pre
               className='font-mono text-sm whitespace-pre-wrap text-gray-800'
               ref={originContainerRef}
-              onScroll={() => {
-                handleScroll('origin')
-              }}
               onMouseEnter={() => (mouseEnterTargetType.current = 'origin')}
               onMouseLeave={() => (mouseEnterTargetType.current = null)}
             >
@@ -219,7 +185,6 @@ const TranslationResult = ({ result }: { result: Result[] }) => {
             <pre
               className='font-mono text-sm whitespace-pre-wrap text-gray-800'
               ref={translateContainerRef}
-              onScroll={() => handleScroll('translate')}
               onMouseEnter={() => (mouseEnterTargetType.current = 'translate')}
               onMouseLeave={() => (mouseEnterTargetType.current = null)}
             >

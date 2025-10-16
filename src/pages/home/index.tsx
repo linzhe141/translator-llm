@@ -1,216 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  Bolt,
-  Bot,
-  MoveRight,
-  UserRound,
-  Loader2,
-  Info,
-  Github,
-} from 'lucide-react'
+import { MoveRight, Loader2, Info, Github } from 'lucide-react'
 import { NavLink } from 'react-router'
 import { useAgent } from '@/hooks/useAgent'
-import type { ContextMessage } from '@/core/context'
-import Markdown from 'react-markdown'
 import logo from '../../../logo.png'
+import { MessageItem } from './components/messageItem'
+import { TranslationResult } from './components/translationResult'
 
-const isElementInContainer = (element: HTMLElement, container: HTMLElement) => {
-  const elementRect = element.getBoundingClientRect()
-  const containerRect = container.getBoundingClientRect()
-
-  return (
-    elementRect.top >= containerRect.top &&
-    elementRect.left >= containerRect.left &&
-    elementRect.bottom <= containerRect.bottom &&
-    elementRect.right <= containerRect.right
-  )
-}
-
-const MessageItem = ({ message }: { message: ContextMessage }) => {
-  const baseClasses =
-    'my-4 rounded-md border p-4 text-muted-foreground font-mono text-sm leading-relaxed'
-
-  switch (message.type) {
-    case 'user':
-      return (
-        <div className={`${baseClasses} border-blue-200 bg-blue-50`}>
-          <div className='mb-2 flex items-center gap-2'>
-            <UserRound className='h-5 w-5 text-blue-600' />
-            <span className='text-sm font-medium text-blue-700'>user</span>
-          </div>
-          <pre className='overflow-auto break-words whitespace-pre-wrap text-gray-800'>
-            {message.message.content}
-          </pre>
-        </div>
-      )
-
-    case 'assistant':
-      let content: any = null
-      let type = ''
-      if (typeof message.message.content === 'string') {
-        // assistant text
-        content = message.message.content
-      } else if (
-        !Array.isArray(message.message.content) &&
-        typeof message.message.content === 'object' &&
-        message.message.content.type === 'reasoning'
-      ) {
-        content = message.message.content.text
-        type = 'reasoning'
-      } else {
-        content = message.message
-        type = 'toolCall'
-      }
-      return (
-        <div className={`${baseClasses} border-green-200 bg-green-50`}>
-          <div className='mb-2 flex items-center gap-2'>
-            <Bot className='h-5 w-5 text-green-600' />
-            <span className='text-sm font-medium text-green-700'>
-              assistant{type !== '' && ': ' + type}
-            </span>
-          </div>
-          {type === 'toolCall' ? (
-            <pre className='overflow-auto break-words whitespace-pre-wrap text-gray-800'>
-              {JSON.stringify(content, null, 2)}
-            </pre>
-          ) : (
-            <Markdown>{content}</Markdown>
-          )}
-        </div>
-      )
-
-    case 'tool':
-      return (
-        <div className={`${baseClasses} border-gray-300`}>
-          <div className='mb-2 flex items-center gap-2'>
-            <Bolt className='h-5 w-5 text-gray-600' />
-            <span className='text-sm font-medium text-gray-700'>tool</span>
-          </div>
-          {message.message.content.map((i) => {
-            if (i.renderer) return <i.renderer />
-            return (
-              <pre className='overflow-auto text-sm break-words whitespace-pre-wrap text-gray-800'>
-                {JSON.stringify(i, null, 2)}
-              </pre>
-            )
-          })}
-        </div>
-      )
-
-    default:
-      return null
-  }
-}
-
-interface Result {
-  origin: string
-  translate: string
-  active: boolean
-  rejectionCount: number
-}
-
-const TranslationResult = ({ result }: { result: Result[] }) => {
-  const mouseEnterTargetType = useRef<'origin' | 'translate' | null>(null)
-  const originRefs = useRef<Map<any, any>>(new Map())
-  const translateRefs = useRef<Map<any, any>>(new Map())
-  const originContainerRef = useRef<any>(null)
-  const translateContainerRef = useRef<any>(null)
-  const [textSegments, setTextSegments] = useState(result)
-
-  function alignSourceMap(
-    data: {
-      origin: string
-      translate: string
-      active: boolean
-    },
-    type: 'origin' | 'translate'
-  ) {
-    const target = textSegments.find((i) => i === data)
-    if (target) {
-      target.active = true
-    }
-    setTextSegments(
-      textSegments.slice(0).map((i) => {
-        return { ...i, active: i === target }
-      })
-    )
-    const refs = type === 'origin' ? translateRefs : originRefs
-    const container =
-      type === 'origin'
-        ? translateContainerRef.current
-        : originContainerRef.current
-    const el = refs.current.get(data)
-    if (el && !isElementInContainer(el, container)) {
-      el.scrollIntoView({ behavior: 'smooth' })
-    }
-  }
-  function cancelAlignSourceMap() {
-    setTextSegments(
-      textSegments.slice(0).map((i) => {
-        return { ...i, active: false }
-      })
-    )
-  }
-  return (
-    <div className='mt-6 space-y-4'>
-      <h3 className='text-lg font-semibold text-gray-800'>翻译结果</h3>
-      <div className='grid grid-cols-1 gap-4 lg:grid-cols-2'>
-        <div className='space-y-2'>
-          <h4 className='text-sm font-medium text-gray-600'>原文</h4>
-          <div className='min-h-[200px] rounded-lg border border-gray-300 bg-gray-50 p-4'>
-            <pre
-              className='font-mono text-sm whitespace-pre-wrap text-gray-800'
-              ref={originContainerRef}
-              onMouseEnter={() => (mouseEnterTargetType.current = 'origin')}
-              onMouseLeave={() => (mouseEnterTargetType.current = null)}
-            >
-              {textSegments.map((item) => (
-                <span
-                  className={`hover:bg-amber-100 ${item.active ? 'bg-amber-100' : ''}`}
-                  onMouseEnter={() => alignSourceMap(item, 'origin')}
-                  onMouseLeave={() => cancelAlignSourceMap()}
-                  ref={(el) => {
-                    originRefs.current.set(item, el)
-                  }}
-                >
-                  {item.origin}
-                </span>
-              ))}
-            </pre>
-          </div>
-        </div>
-        <div className='space-y-2'>
-          <h4 className='text-sm font-medium text-gray-600'>译文</h4>
-          <div className='min-h-[200px] rounded-lg border border-gray-300 bg-blue-50 p-4'>
-            <pre
-              className='font-mono text-sm whitespace-pre-wrap text-gray-800'
-              ref={translateContainerRef}
-              onMouseEnter={() => (mouseEnterTargetType.current = 'translate')}
-              onMouseLeave={() => (mouseEnterTargetType.current = null)}
-            >
-              {textSegments.map((item) => (
-                <span
-                  className={`hover:bg-amber-100 ${item.active ? 'bg-amber-100' : ''}`}
-                  onMouseEnter={() => alignSourceMap(item, 'translate')}
-                  onMouseLeave={() => cancelAlignSourceMap()}
-                  ref={(el) => {
-                    translateRefs.current.set(item, el)
-                  }}
-                >
-                  {item.translate}
-                </span>
-              ))}
-            </pre>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+const LANGUAGES = [
+  { name: '中文', flag: '🇨🇳' },
+  { name: '古文(文言文)', flag: '🇨🇳' },
+  { name: 'English', flag: '🇺🇸' },
+  { name: '日本語', flag: '🇯🇵' },
+  { name: '한국어', flag: '🇰🇷' },
+  { name: 'Français', flag: '🇫🇷' },
+]
 
 export default function Home() {
   const [userInput, setUserInput] = useState('')
   const { agent, messageList, state } = useAgent()
+  const [targetLang, setTargetLang] = useState('English')
+  const oldTargetLang = useRef('')
+  const [customLang, setCustomLang] = useState('')
 
   // 开发环境下暴露agent到window对象
   if (process.env.NODE_ENV === 'development') {
@@ -231,14 +41,23 @@ export default function Home() {
     agent.current.clear()
 
     agent.current.userSubmit({
-      content: userInput,
+      content: `translate this to ${targetLang || customLang}: ${userInput}`,
       role: 'user',
     })
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && e.ctrlKey && !disabled) {
-      handleTranslate()
+    if (e.key === 'Enter') {
+      if (e.ctrlKey || e.shiftKey) {
+        // 让浏览器处理默认的换行行为
+        return
+      } else {
+        // 阻止默认换行，触发提交
+        e.preventDefault()
+        if (!disabled) {
+          handleTranslate()
+        }
+      }
     }
   }
 
@@ -271,7 +90,6 @@ export default function Home() {
               <Github className='h-4 w-4' />
             </NavLink>
           </div>
-
           {/* 输入区域 */}
           <div className='mb-6 space-y-4'>
             <div>
@@ -285,6 +103,41 @@ export default function Home() {
                 基于大语言模型的Agent架构，具备上下文理解、多轮对话和智能决策能力。
                 支持复杂文本的语境分析和专业术语处理，提供更准确、自然的翻译结果。
               </p>
+              <div className='mb-4 flex flex-wrap items-center gap-2'>
+                {LANGUAGES.map((lang) => (
+                  <button
+                    key={lang.name}
+                    onClick={() => {
+                      setTargetLang(lang.name)
+                      setCustomLang('')
+                    }}
+                    className={`rounded-full border px-3 py-1 text-sm transition-all ${
+                      targetLang === lang.name
+                        ? 'border-blue-500 bg-blue-100 text-blue-600'
+                        : 'border-gray-300 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className='mr-1'>{lang.flag}</span>
+                    {lang.name}
+                  </button>
+                ))}
+                <input
+                  type='text'
+                  placeholder='自定义语言...'
+                  value={customLang}
+                  onChange={(e) => {
+                    if (e.target.value && targetLang) {
+                      oldTargetLang.current = targetLang
+                      setTargetLang('')
+                    }
+                    setCustomLang(e.target.value)
+                    if (!e.target.value) {
+                      setTargetLang(oldTargetLang.current)
+                    }
+                  }}
+                  className='ml-2 w-40 rounded-lg border border-gray-300 px-3 py-1 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200'
+                />
+              </div>
               <textarea
                 className='w-full resize-none rounded-lg border border-gray-300 p-4 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200'
                 value={userInput}

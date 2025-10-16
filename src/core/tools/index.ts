@@ -1,6 +1,6 @@
-import { TranslateToolMessage } from '@/pages/home/tools/translateToolMessage'
 import { splitExecutor, splitTool } from './split'
 import { translateExecutor, translateTool } from './translate'
+import { TranslateToolMessage } from './renderer/translateToolMessage'
 
 export const tools = {
   translate: translateTool,

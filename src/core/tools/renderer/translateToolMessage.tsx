@@ -1,7 +1,7 @@
 import { Check, X } from 'lucide-react'
 import { useAgent } from '@/hooks/useAgent'
 import type { TranslateToolResultMeta } from '@/core/tools/translate'
-import { DiffViewer } from '../diffViewer'
+import { DiffViewer } from './diffViewer'
 import { translateToolUIPlaceholder } from '@/common'
 import { useState } from 'react'
 

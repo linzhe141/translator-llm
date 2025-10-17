@@ -1,9 +1,11 @@
 import { useAgent } from '@/hooks/useAgent'
 import { useSettingsStore } from '@/store/settings'
-import { Check, Loader, MoveLeft, Zap } from 'lucide-react'
+import { Loader, MoveLeft, Zap } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink } from 'react-router'
 import { toast } from 'sonner'
+import { generateText } from 'ai'
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 
 interface FormData {
   apiKey: string
@@ -12,8 +14,9 @@ interface FormData {
   toolModelID: string
 }
 export default function Setting() {
-  const { initAgent } = useAgent()
-  const [pending, setPending] = useState(false)
+  const { createAgent } = useAgent()
+  const [reasonModelConnecting, setReasonModelConnecting] = useState(false)
+  const [toolModelConnecting, setToolModelConnecting] = useState(false)
   const [error, setError] = useState(false)
   const [formErrors, setFormErrors] = useState<FormData>({
     apiKey: '',
@@ -81,18 +84,59 @@ export default function Setting() {
     }
 
     console.log('Form submitted:', formData)
-    setPending(true)
     setError(false)
 
     try {
       setLLMApi(formData)
-      initAgent()
+      createAgent()
       toast.success('LLM client settings updated successfully!')
     } catch (e) {
       console.error('Error setting LLM client:', e)
       setError(true)
+    }
+  }
+  const handleConnect = async (type: 'reasoning' | 'tool') => {
+    if (!validateForm()) {
+      return
+    }
+    const setConnectState =
+      type === 'reasoning' ? setReasonModelConnecting : setToolModelConnecting
+    const model =
+      type === 'reasoning' ? formData.reasonModelID : formData.toolModelID
+    const label = type === 'reasoning' ? 'Reasoning Model' : 'Tool Model'
+    setError(false)
+    setConnectState(true)
+
+    try {
+      const openai = createOpenAICompatible({
+        name: 'openai-compatible',
+        apiKey: formData.apiKey,
+        baseURL: formData.baseUrl,
+      })
+      await generateText({
+        model: openai(model),
+        prompt: 'hello, just test connection, only output 10 character',
+      })
+      toast.success(
+        <span>
+          <span>
+            {label}: {model}
+          </span>
+          <span> connection test successful!</span>
+        </span>
+      )
+    } catch (e: any) {
+      console.error('Error', e)
+      setError(true)
+      if (e.statusCode === 404) {
+        toast.error(
+          <div className='text-red-500'>
+            Connection test failure: 当前 API 不支持所选模型
+          </div>
+        )
+      }
     } finally {
-      setPending(false)
+      setConnectState(false)
     }
   }
 
@@ -161,9 +205,24 @@ export default function Setting() {
         <div className='space-y-2'>
           <label
             htmlFor='reasonModelID'
-            className='text-secondary-foreground block text-lg'
+            className='text-secondary-foreground flex items-center justify-between text-lg'
           >
             Reasoning Model
+            <button
+              type='button'
+              onClick={() => handleConnect('reasoning')}
+              disabled={reasonModelConnecting}
+              className='ml-4 inline-flex items-center justify-center rounded-md bg-blue-600 px-2 py-1 text-xs text-white transition-colors hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50'
+            >
+              {reasonModelConnecting ? (
+                <Loader className='h-4 w-4 animate-spin' />
+              ) : (
+                <Zap className='h-4 w-4' />
+              )}
+              <span className='ml-2'>
+                {reasonModelConnecting ? 'Connecting...' : 'Connect test'}
+              </span>
+            </button>
           </label>
           <input
             id='reasonModelID'
@@ -181,9 +240,24 @@ export default function Setting() {
         <div className='space-y-2'>
           <label
             htmlFor='toolModelID'
-            className='text-secondary-foreground block text-lg'
+            className='text-secondary-foreground flex items-center justify-between text-lg'
           >
             Tool Model
+            <button
+              type='button'
+              onClick={() => handleConnect('tool')}
+              disabled={toolModelConnecting}
+              className='ml-4 inline-flex items-center justify-center rounded-md bg-blue-600 px-2 py-1 text-xs text-white transition-colors hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50'
+            >
+              {toolModelConnecting ? (
+                <Loader className='h-4 w-4 animate-spin' />
+              ) : (
+                <Zap className='h-4 w-4' />
+              )}
+              <span className='ml-2'>
+                {toolModelConnecting ? 'Connecting...' : 'Connect test'}
+              </span>
+            </button>
           </label>
           <input
             id='toolModelID'
@@ -198,20 +272,14 @@ export default function Setting() {
           )}
         </div>
 
-        <button
-          type='submit'
-          disabled={pending}
-          className='inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50'
-        >
-          {pending ? (
-            <Loader className='h-4 w-4 animate-spin' />
-          ) : (
-            <Check className='h-4 w-4' />
-          )}
-          <span className='ml-2'>
-            {pending ? 'Saving...' : 'Save Settings'}
-          </span>
-        </button>
+        <div className='flex items-center gap-4'>
+          <button
+            type='submit'
+            className='inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50'
+          >
+            <span className='ml-2'>Save Settings</span>
+          </button>
+        </div>
       </form>
     </div>
   )

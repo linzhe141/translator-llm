@@ -17,8 +17,8 @@ const LANGUAGES = [
 
 export default function Home() {
   const [userInput, setUserInput] = useState('')
-  const { agent, messageList, state } = useAgent()
-  const [targetLang, setTargetLang] = useState('English')
+  const { agent, messageList, state, reset } = useAgent()
+  const [targetLang, setTargetLang] = useState('古文(文言文)')
   const oldTargetLang = useRef('')
   const [customLang, setCustomLang] = useState('')
 
@@ -38,7 +38,7 @@ export default function Home() {
   const handleTranslate = () => {
     if (disabled) return
 
-    agent.current.clear()
+    agent.current.init()
 
     agent.current.userSubmit({
       content: `translate this to ${targetLang || customLang}: ${userInput}`,
@@ -70,6 +70,19 @@ export default function Home() {
     }
   }, [messageList, isProcessing, state])
 
+  useEffect(() => {
+    agent.current.init()
+    reset()
+  }, [agent, reset])
+  useEffect(() => {
+    const cancel = agent.current.cancel.bind(agent.current)
+    return () => {
+      if (isProcessing) {
+        console.log('abort when leave this page')
+        cancel()
+      }
+    }
+  }, [agent, isProcessing])
   return (
     <div className='flex h-screen flex-col'>
       <div className='h-0 flex-1 overflow-auto py-6' ref={scrollRef}>
@@ -123,7 +136,7 @@ export default function Home() {
                 ))}
                 <input
                   type='text'
-                  placeholder='自定义语言...'
+                  placeholder='其他语言...'
                   value={customLang}
                   onChange={(e) => {
                     if (e.target.value && targetLang) {
@@ -207,15 +220,18 @@ export default function Home() {
             当前状态：
             <span className='ml-1 font-medium'>{state}</span>
           </span>
-          {isProcessing && (
-            <button
-              className='ml-2 flex items-center gap-1 rounded-md border border-red-200 bg-red-100 px-3 py-1 text-sm font-medium text-red-600 shadow transition-colors hover:bg-red-200 active:bg-red-300'
-              onClick={() => agent.current.cancel()}
-            >
+          {isProcessing &&
+            (state !== 'tool_executing' ? (
+              <button
+                className='ml-2 flex items-center gap-1 rounded-md border border-red-200 bg-red-100 px-3 py-1 text-sm font-medium text-red-600 shadow transition-colors hover:bg-red-200 active:bg-red-300'
+                onClick={() => agent.current.cancel()}
+              >
+                <Loader2 className='mr-1 h-4 w-4 animate-spin' />
+                abort
+              </button>
+            ) : (
               <Loader2 className='mr-1 h-4 w-4 animate-spin' />
-              abort
-            </button>
-          )}
+            ))}
         </div>
       )}
     </div>

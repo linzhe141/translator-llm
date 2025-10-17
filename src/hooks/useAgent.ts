@@ -1,5 +1,5 @@
 import { Agent } from '@/core/agent'
-import { createRef } from 'react'
+import { createRef, useCallback } from 'react'
 import { useAgentStore } from '@/store/agent'
 
 // TODO 这个单例有点抽象了
@@ -17,7 +17,7 @@ export function useAgent() {
   const toolExecuteMetaInfo = useAgentStore((s) => s.toolExecuteMetaInfo)
   const setToolExecuteMetaInfo = useAgentStore((s) => s.setToolExecuteMetaInfo)
 
-  function initAgent() {
+  function createAgent() {
     _agent.current = new Agent({
       setPendingResolveData,
       setState,
@@ -26,29 +26,22 @@ export function useAgent() {
     })
   }
   if (_agent.current === null) {
-    initAgent()
+    createAgent()
   }
 
-  // TODO
-  // useEffect(() => {
-  //   let timer = null
-  //   if (state === 'workflow_complete') {
-  //     timer = setTimeout(() => {
-  //       setState('idle')
-  //     }, 2000)
-  //   }
-  //   return () => {
-  //     if (timer) {
-  //       clearTimeout(timer)
-  //     }
-  //   }
-  // }, [state, setState])
+  const reset = useCallback(() => {
+    setPendingResolveData(null)
+    setMessageList([])
+    setState('idle')
+    setToolExecuteMetaInfo(null)
+  }, [setPendingResolveData, setMessageList, setState, setToolExecuteMetaInfo])
   return {
     agent: _agent,
     pendingResolveData,
     messageList,
     state,
     toolExecuteMetaInfo,
-    initAgent,
+    createAgent,
+    reset,
   }
 }

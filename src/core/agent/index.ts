@@ -63,7 +63,7 @@ export class Agent {
     if (this.abortController) this.abortController.abort()
   }
 
-  clear() {
+  init() {
     this.context = new Context(this.options.setMessageList)
     this.workingMemory = createInitialWorkingMemory()
   }

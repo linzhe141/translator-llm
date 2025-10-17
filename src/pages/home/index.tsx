@@ -8,7 +8,7 @@ import { TranslationResult } from './components/translationResult'
 
 const LANGUAGES = [
   { name: '中文', flag: '🇨🇳' },
-  { name: '古文(文言文)', flag: '🇨🇳' },
+  { name: '文言文(简体)', flag: '🇨🇳' },
   { name: 'English', flag: '🇺🇸' },
   { name: '日本語', flag: '🇯🇵' },
   { name: '한국어', flag: '🇰🇷' },
@@ -18,7 +18,7 @@ const LANGUAGES = [
 export default function Home() {
   const [userInput, setUserInput] = useState('')
   const { agent, messageList, state, reset } = useAgent()
-  const [targetLang, setTargetLang] = useState('古文(文言文)')
+  const [targetLang, setTargetLang] = useState('文言文(简体)')
   const oldTargetLang = useRef('')
   const [customLang, setCustomLang] = useState('')
 

@@ -86,7 +86,7 @@ export default function Home() {
   return (
     <div className='flex h-screen flex-col'>
       <div className='h-0 flex-1 overflow-auto py-6' ref={scrollRef}>
-        <div className='mx-auto max-w-6xl'>
+        <div className='mx-auto max-w-5xl'>
           {/* 顶部导航 */}
           <div className='mb-6 flex justify-between'>
             <NavLink

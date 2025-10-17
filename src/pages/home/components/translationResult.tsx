@@ -55,14 +55,12 @@ const PanelHeader = ({
 
 const TextSegment = ({
   item,
-  index,
   type,
   onHover,
   onLeave,
   setRef,
 }: {
   item: Result
-  index: number
   type: 'origin' | 'translate'
   onHover: () => void
   onLeave: () => void
@@ -73,7 +71,7 @@ const TextSegment = ({
   const styles = REJECTION_STYLES[level]
 
   return (
-    <span key={index}>
+    <span>
       <span
         className={`cursor-pointer rounded transition-all duration-200 hover:bg-amber-200 hover:shadow-sm ${
           item.active ? 'bg-amber-300 font-medium shadow-sm' : ''
@@ -154,7 +152,6 @@ const TranslationPanel = ({
             <TextSegment
               key={index}
               item={item}
-              index={index}
               type={type}
               onHover={() => onSegmentHover(item)}
               onLeave={onSegmentLeave}

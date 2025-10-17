@@ -35,7 +35,6 @@ const PanelHeader = ({
   stat,
 }: {
   title: string
-  color: string
   stat: React.ReactNode
 }) => {
   return (
@@ -116,14 +115,10 @@ const TranslationPanel = ({
   const config = {
     origin: {
       title: '原文',
-      color: 'emerald',
-      scrollbar: 'scrollbar-thumb-gray-300',
       stat: <span>{segments.length}段</span>,
     },
     translate: {
       title: '译文',
-      color: 'blue',
-      scrollbar: 'scrollbar-thumb-blue-300',
       stat: (
         <span>
           失败：{segments.reduce((sum, item) => sum + item.rejectionCount, 0)}次
@@ -136,13 +131,9 @@ const TranslationPanel = ({
     <div
       className={`flex flex-1 flex-col border ${type === 'translate' ? 'border-l-0' : ''} border-gray-200 bg-white/50`}
     >
-      <PanelHeader
-        title={config.title}
-        color={config.color}
-        stat={config.stat}
-      />
+      <PanelHeader title={config.title} stat={config.stat} />
       <div
-        className={`scrollbar-thin ${config.scrollbar} scrollbar-track-transparent flex-1 overflow-y-auto p-6`}
+        className={`scrollbar-thin scrollbar-track-transparent flex-1 overflow-y-auto p-6`}
         ref={containerRef}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}

@@ -1,7 +1,7 @@
 # AI Translator Agent
 
 <p align="center">
-   <img width="500px" src="./demo.png" alt="linzhe-tools Logo" />
+   <img width="830px" src="./demo.png" alt="linzhe-tools Logo" />
 </p>
 
 A powerful translation application powered by Large Language Model (LLM) agents, featuring context understanding, multi-turn dialogue, and intelligent decision-making capabilities.

@@ -72,15 +72,23 @@ export default function Home() {
     }
   }
 
-  const scrollRef = useRef<HTMLDivElement>(null)
-
-  // 自动滚动到底
+  const [showToButtom, setShowToButtom] = useState(false)
+  const pleaceholderRef = useRef<HTMLDivElement>(null)
+  function clickToButtomHandle() {
+    pleaceholderRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
   useEffect(() => {
-    if ((isProcessing || state === 'workflow_complete') && scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
-  }, [messageList, isProcessing, state])
-
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setShowToButtom(!entry.isIntersecting)
+        })
+      },
+      { threshold: 0.5 }
+    )
+    observer.observe(pleaceholderRef.current!)
+    return () => observer.disconnect()
+  }, [])
   useEffect(() => {
     agent.current.init()
     reset()
@@ -96,7 +104,7 @@ export default function Home() {
   }, [agent, isProcessing])
   return (
     <div className='flex h-screen flex-col'>
-      <div className='h-0 flex-1 overflow-auto py-6' ref={scrollRef}>
+      <div className='h-0 flex-1 overflow-auto py-6'>
         <div className='mx-auto max-w-5xl'>
           {/* 顶部导航 */}
           <div className='mb-6 flex justify-between'>
@@ -216,7 +224,29 @@ export default function Home() {
             )}
         </div>
 
-        <div className='h-[200px]'></div>
+        <div className='h-[200px]' ref={pleaceholderRef}></div>
+        {showToButtom && (
+          <button
+            v-if='showToButtom'
+            className='fixed bottom-10 left-1/2 z-100 -translate-x-1/2 cursor-pointer rounded-full border-1 border-gray-300 bg-gray-50 p-2 shadow-xl hover:shadow-2xl'
+            onClick={clickToButtomHandle}
+          >
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              width='24'
+              height='24'
+              viewBox='0 0 24 24'
+              fill='none'
+              stroke='currentColor'
+              stroke-width='2'
+              stroke-linecap='round'
+              stroke-linejoin='round'
+            >
+              <path d='M12 5v14' />
+              <path d='m19 12-7 7-7-7' />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* 状态指示器 */}

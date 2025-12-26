@@ -10,35 +10,30 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 interface FormData {
   apiKey: string
   baseUrl: string
-  reasonModelID: string
-  toolModelID: string
+  modelID: string
 }
 export default function Setting() {
   const { createAgent } = useAgent()
-  const [reasonModelConnecting, setReasonModelConnecting] = useState(false)
-  const [toolModelConnecting, setToolModelConnecting] = useState(false)
+  const [modelConnecting, setModelConnecting] = useState(false)
   const [error, setError] = useState(false)
   const [formErrors, setFormErrors] = useState<FormData>({
     apiKey: '',
     baseUrl: '',
-    reasonModelID: '',
-    toolModelID: '',
+    modelID: '',
   })
 
-  const { apiKey, baseUrl, reasonModelID, toolModelID, setLLMApi } =
-    useSettingsStore()
+  const { apiKey, baseUrl, modelID, setLLMApi } = useSettingsStore()
   const [formData, setFormData] = useState({
     apiKey: apiKey || '',
     baseUrl: baseUrl || '',
-    reasonModelID: reasonModelID || '',
-    toolModelID: toolModelID || '',
+    modelID: modelID || '',
   })
 
   const validateForm = () => {
     const errors = {
       apiKey: '',
       baseUrl: '',
-      reasonModelID: '',
+      modelID: '',
       toolModelID: '',
     }
 
@@ -50,12 +45,8 @@ export default function Setting() {
       errors.baseUrl = 'Base URL is required'
     }
 
-    if (!formData.reasonModelID.trim()) {
-      errors.reasonModelID = 'reasonModelID is required'
-    }
-
-    if (!formData.toolModelID.trim()) {
-      errors.toolModelID = 'toolModelID is required'
+    if (!formData.modelID.trim()) {
+      errors.modelID = 'modelID is required'
     }
 
     setFormErrors(errors)
@@ -95,17 +86,13 @@ export default function Setting() {
       setError(true)
     }
   }
-  const handleConnect = async (type: 'reasoning' | 'tool') => {
+  const handleConnect = async () => {
     if (!validateForm()) {
       return
     }
-    const setConnectState =
-      type === 'reasoning' ? setReasonModelConnecting : setToolModelConnecting
-    const model =
-      type === 'reasoning' ? formData.reasonModelID : formData.toolModelID
-    const label = type === 'reasoning' ? 'Reasoning Model' : 'Tool Model'
+
     setError(false)
-    setConnectState(true)
+    setModelConnecting(true)
 
     try {
       const openai = createOpenAICompatible({
@@ -114,14 +101,11 @@ export default function Setting() {
         baseURL: formData.baseUrl,
       })
       await generateText({
-        model: openai(model),
+        model: openai(formData.modelID),
         prompt: 'hello, just test connection, only output 10 character',
       })
       toast.success(
         <span>
-          <span>
-            {label}: {model}
-          </span>
           <span> connection test successful!</span>
         </span>
       )
@@ -136,7 +120,7 @@ export default function Setting() {
         )
       }
     } finally {
-      setConnectState(false)
+      setModelConnecting(false)
     }
   }
 
@@ -204,71 +188,36 @@ export default function Setting() {
 
         <div className='space-y-2'>
           <label
-            htmlFor='reasonModelID'
+            htmlFor='modelID'
             className='text-secondary-foreground flex items-center justify-between text-lg'
           >
-            Reasoning Model
+            Model
             <button
               type='button'
-              onClick={() => handleConnect('reasoning')}
-              disabled={reasonModelConnecting}
+              onClick={() => handleConnect()}
+              disabled={modelConnecting}
               className='ml-4 inline-flex items-center justify-center rounded-md bg-blue-600 px-2 py-1 text-xs text-white transition-colors hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50'
             >
-              {reasonModelConnecting ? (
+              {modelConnecting ? (
                 <Loader className='h-4 w-4 animate-spin' />
               ) : (
                 <Zap className='h-4 w-4' />
               )}
               <span className='ml-2'>
-                {reasonModelConnecting ? 'Connecting...' : 'Connect test'}
+                {modelConnecting ? 'Connecting...' : 'Connect test'}
               </span>
             </button>
           </label>
           <input
-            id='reasonModelID'
+            id='modelID'
             type='text'
-            value={formData.reasonModelID}
-            onChange={(e) => handleInputChange('reasonModelID', e.target.value)}
+            value={formData.modelID}
+            onChange={(e) => handleInputChange('modelID', e.target.value)}
             className='w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none'
             placeholder='gpt-3.5-turbo'
           />
-          {formErrors.reasonModelID && (
-            <p className='text-sm text-red-500'>{formErrors.reasonModelID}</p>
-          )}
-        </div>
-
-        <div className='space-y-2'>
-          <label
-            htmlFor='toolModelID'
-            className='text-secondary-foreground flex items-center justify-between text-lg'
-          >
-            Tool Model
-            <button
-              type='button'
-              onClick={() => handleConnect('tool')}
-              disabled={toolModelConnecting}
-              className='ml-4 inline-flex items-center justify-center rounded-md bg-blue-600 px-2 py-1 text-xs text-white transition-colors hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50'
-            >
-              {toolModelConnecting ? (
-                <Loader className='h-4 w-4 animate-spin' />
-              ) : (
-                <Zap className='h-4 w-4' />
-              )}
-              <span className='ml-2'>
-                {toolModelConnecting ? 'Connecting...' : 'Connect test'}
-              </span>
-            </button>
-          </label>
-          <input
-            id='toolModelID'
-            type='text'
-            value={formData.toolModelID}
-            onChange={(e) => handleInputChange('toolModelID', e.target.value)}
-            className='w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none'
-            placeholder='gpt-3.5-turbo'
-          />
-          {formErrors.toolModelID && (
-            <p className='text-sm text-red-500'>{formErrors.toolModelID}</p>
+          {formErrors.modelID && (
+            <p className='text-sm text-red-500'>{formErrors.modelID}</p>
           )}
         </div>
 

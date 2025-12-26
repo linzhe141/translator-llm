@@ -4,20 +4,51 @@ import type { Agent } from '../agent'
 import { translateToolUIPlaceholder } from '@/common'
 
 const getDescription = (targetLanguage: string) => `
-You are a translation tool named "translate".  
-Your ONLY task: **translate non-code text from any language into ${targetLanguage}**.  
+You are a deterministic translation engine named "translate".
 
-Description:  
-1. **Preserve ALL formatting exactly** — including:
-   - Line breaks  
-   - Empty lines  
-   - Spaces and indentation  
-   - Markdown or HTML structure  
-   - Lists, tables, emojis, punctuation, and symbols  
-2. **Do NOT translate code snippets** (inline code, fenced code blocks, programming syntax).  
-   - Keep code exactly as it appears.  
-   - Only translate surrounding comments, text, or documentation.  
-3. **Do NOT change the order of text segments.**  
+Your task is NOT free-form translation.
+Your task is a **lossless text transformation**:
+translate human language content into ${targetLanguage}
+while preserving the original text structure EXACTLY.
+
+This is a strict contract.
+
+====================
+CRITICAL RULES
+====================
+
+1. You MUST preserve the input text byte-for-byte, EXCEPT for the translated human language.
+   This includes but is not limited to:
+   - All spaces (leading, trailing, and internal)
+   - All line breaks and empty lines
+   - All punctuation, symbols, and emojis
+   - Markdown syntax, HTML tags, list markers, table separators
+   - Indentation and alignment
+
+2. You MUST NOT:
+   - Add any new characters
+   - Remove any characters
+   - Normalize punctuation (e.g. ":" vs "：" or quotes)
+   - Merge or split lines
+   - Reorder text segments
+
+3. Code is sacred.
+   - Do NOT translate inline code
+   - Do NOT translate fenced code blocks
+   - Do NOT modify code formatting in any way
+   - Only translate natural language outside code
+
+4. Output ONLY the translated text.
+   - No explanations
+   - No comments
+   - No tags
+   - No wrappers
+
+5. This output will be programmatically compared against the original.
+   ANY formatting deviation is considered a FAILURE.
+
+You may view the full original document as read-only context
+to understand meaning, but you must ONLY translate the provided segment.
 `
 
 const inputSchema = z.object({
@@ -25,6 +56,7 @@ const inputSchema = z.object({
     .string()
     .describe('The target language to be translated')
     .default('english'),
+  fullText: z.string().describe('The full original markdown text string'),
   splits: z.array(
     z.string().describe('The PARTIAL source string to translate')
   ),
@@ -152,25 +184,22 @@ export const translateExecutor = async (
       model: agent.models.tool,
       system,
       prompt: `
-        ${
-          Object.keys(rejected).length > 0
-            ? `
-# This is <original-sentence>${sentence}</original-sentence> that had translation issues:
+Translate the following text into ${targetLanguage}.
 
-${rejected[sentence]
-  .slice(-3)
-  .map((i) => `- <rejected-translated>${i}</rejected-translated>`)
-  .join('\n')}
-The following sentences were previously rejected by human reviewers
-They were rejected for stylistic or wording reasons — not for accuracy.
-You must produce a **different rendering** that preserves meaning
-but **uses different vocabulary or phrasing** from the rejected ones.
+STRICT REQUIREMENTS:
+- Preserve all symbols, punctuation, spacing, and line breaks exactly.
+- Translate ONLY human language.
+- Do NOT add or remove any characters.
 
-# Translate this original sentence to ${targetLanguage} again: ${sentence}, do not use any tags to wrap the translated content 
-`
-            : `translate this original sentence to ${targetLanguage} : ${sentence}, do not use any tags to wrap the translated content `
-        }
-      `,
+TEXT TO TRANSLATE:
+${sentence}
+
+REFERENCE CONTEXT (read-only):
+${input.fullText}
+
+REJECTIONS: Do NOT repeat these translations.
+${(rejected[sentence] || []).map((i) => `- ${i}`).join('\n')}
+`,
       abortSignal: agent.abortController!.signal,
     })
     return res.text
@@ -178,5 +207,6 @@ but **uses different vocabulary or phrasing** from the rejected ones.
 
   return {
     content: response,
+    status: 'translation completed',
   }
 }

@@ -4,16 +4,14 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 type State = {
   apiKey: string
   baseUrl: string
-  reasonModelID: string
-  toolModelID: string
+  modelID: string
 }
 
 type Actions = {
   setLLMApi: (data: {
     apiKey: string
     baseUrl: string
-    reasonModelID: string
-    toolModelID: string
+    modelID: string
   }) => void
 }
 
@@ -22,8 +20,7 @@ export const useSettingsStore = create<State & Actions>()(
     (set): State & Actions => ({
       apiKey: '',
       baseUrl: '',
-      reasonModelID: '',
-      toolModelID: '',
+      modelID: '',
       setLLMApi: (data) => {
         console.log('setLLMApi', data)
         set({ ...data })

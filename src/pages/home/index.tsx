@@ -5,22 +5,25 @@ import { useAgent } from '@/hooks/useAgent'
 import logo from '../../../logo.png'
 import { MessageItem } from './components/messageItem'
 import { TranslationResult } from './components/translationResult'
+import { useSettingsStore } from '@/store/settings'
+import { toast } from 'sonner'
 
 const LANGUAGES = [
   { name: '中文', flag: '🇨🇳' },
-  { name: '文言文(简体)', flag: '🇨🇳' },
+  { name: '古文(文言文)', flag: '🇨🇳' },
   { name: 'English', flag: '🇺🇸' },
   { name: '日本語', flag: '🇯🇵' },
   { name: '한국어', flag: '🇰🇷' },
   { name: 'Français', flag: '🇫🇷' },
-]
+] as const
 
 export default function Home() {
   const [userInput, setUserInput] = useState('')
   const { agent, messageList, state, reset } = useAgent()
-  const [targetLang, setTargetLang] = useState('文言文(简体)')
+  const [targetLang, setTargetLang] = useState('古文(文言文)')
   const oldTargetLang = useRef('')
   const [customLang, setCustomLang] = useState('')
+  const { apiKey, baseUrl, modelID } = useSettingsStore()
 
   // 开发环境下暴露agent到window对象
   if (process.env.NODE_ENV === 'development') {
@@ -36,6 +39,14 @@ export default function Home() {
     state !== 'abort'
 
   const handleTranslate = () => {
+    if (!apiKey || !baseUrl || !modelID) {
+      toast.error(
+        <div className='text-red-500'>
+          请先前往设置页面，配置 API Key、Base URL 及 Reason Model ID！
+        </div>
+      )
+      return
+    }
     if (disabled) return
 
     agent.current.init()

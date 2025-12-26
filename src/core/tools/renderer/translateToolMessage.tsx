@@ -17,8 +17,13 @@ export function TranslateToolMessage() {
     }[]
     data: TranslateToolResultMeta[]
   }
-  const { splits, data: list } = toolMeta
   const [currentIndex, setCurrentIndex] = useState(0)
+  if (toolMeta === null) {
+    return (
+      <div className='my-4 text-2xl'>Oops, an error occurred! Try again</div>
+    )
+  }
+  const { splits, data: list } = toolMeta
   function onClickResolve() {
     if (currentIndex < splits.length - 1) {
       setCurrentIndex(currentIndex + 1)

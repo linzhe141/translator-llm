@@ -143,8 +143,9 @@ export const translateExecutor = async (
     translateItem.text = translatedCore
     syncStoreDispatch(data)
 
-    const { status } = await agent.waitingToBeResolved()
-    if (status === 'approved') {
+    const auditResult = await agent.waitingToBeResolved()
+
+    if (auditResult.status === 'approved') {
       // mark complete
       agent.workingMemory.currentTranslationIndex++
       agent.workingMemory.translationResults.push({
@@ -159,10 +160,15 @@ export const translateExecutor = async (
       target.status = 'approved'
       syncStoreDispatch(data)
     } else {
+      const rejuectReason = auditResult.rejectReason
       if (rejected[sentence]) {
-        rejected[sentence].push(translatedCore)
+        rejected[sentence].push(
+          translatedCore + (rejuectReason ? ` (Reason: ${rejuectReason})` : '')
+        )
       } else {
-        rejected[sentence] = [translatedCore]
+        rejected[sentence] = [
+          translatedCore + (rejuectReason ? ` (Reason: ${rejuectReason})` : ''),
+        ]
       }
 
       translateItem.status = 'rejected'

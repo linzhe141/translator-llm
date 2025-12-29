@@ -121,7 +121,8 @@ const TranslationPanel = ({
       title: '译文',
       stat: (
         <span>
-          失败：{segments.reduce((sum, item) => sum + item.rejectionCount, 0)}次
+          re-try：{segments.reduce((sum, item) => sum + item.rejectionCount, 0)}
+          次
         </span>
       ),
     },

@@ -11,6 +11,9 @@ import { ToolExecutor } from './toolExecutor.js'
 import { LLMHandler } from './llmHandle.js'
 import type { ComponentType } from 'react'
 
+type ResolveType =
+  | { status: 'approved' }
+  | { status: 'rejected'; rejectReason: string }
 export type WorkflowState =
   | 'idle'
   | 'user_input'
@@ -39,9 +42,7 @@ export class Agent {
   workingMemory: WorkingMemory = createInitialWorkingMemory()
   abortController: AbortController | null = null
 
-  private _resolve:
-    | ((value: { status: 'approved' | 'rejected' }) => void)
-    | null = null
+  private _resolve: ((value: ResolveType) => void) | null = null
 
   private _state: WorkflowState = 'idle'
   get state() {
@@ -68,11 +69,9 @@ export class Agent {
     this.workingMemory = createInitialWorkingMemory()
   }
 
-  waitingToBeResolved(
-    data?: any
-  ): Promise<{ status: 'approved' | 'rejected' }> {
+  waitingToBeResolved(data?: any): Promise<ResolveType> {
     this.options.setPendingResolveData(data)
-    return new Promise<{ status: 'approved' | 'rejected' }>((resolve) => {
+    return new Promise<ResolveType>((resolve) => {
       this._resolve = resolve
     }).finally(() => {
       this.options.setPendingResolveData(null)
@@ -82,8 +81,8 @@ export class Agent {
   resolveTask() {
     this._resolve?.({ status: 'approved' })
   }
-  rejectTask() {
-    this._resolve?.({ status: 'rejected' })
+  rejectTask(reason: string) {
+    this._resolve?.({ status: 'rejected', rejectReason: reason })
   }
 
   async userSubmit(message: UserMessage) {
